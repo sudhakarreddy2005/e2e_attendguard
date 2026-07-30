@@ -1,0 +1,645 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@layer base {
+  :root {
+    --apple-primary: #007AFF;
+    --apple-success: #30D158;
+    --apple-warning: #FF9F0A;
+    --apple-danger: #FF453A;
+    --apple-purple: #BF5AF2;
+    --apple-pink: #FF2D55;
+
+    --bg-main: #F2F2F7;
+    --glass-bg: rgba(255, 255, 255, 0.75);
+    --glass-surface: rgba(255, 255, 255, 0.75);
+    --glass-border: rgba(255, 255, 255, 0.5);
+    --glass-border-subtle: rgba(255, 255, 255, 0.3);
+    --glass-shadow: 0 20px 60px rgba(15, 23, 42, 0.08);
+
+    --text-primary: #1E293B;
+    --text-secondary: #475569;
+  }
+
+  .dark {
+    --apple-primary: #0A84FF;
+    --apple-success: #30D158;
+    --apple-warning: #FF9F0A;
+    --apple-danger: #FF453A;
+    --apple-purple: #BF5AF2;
+    --apple-pink: #FF2D55;
+
+    --bg-main: #0B1020;
+    --glass-bg: rgba(24, 24, 28, 0.72);
+    --glass-surface: rgba(30, 30, 36, 0.78);
+    --glass-border: rgba(255, 255, 255, 0.08);
+    --glass-border-subtle: rgba(255, 255, 255, 0.05);
+    --glass-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
+
+    --text-primary: #F5F5F7;
+    --text-secondary: #98989D;
+  }
+
+  body {
+    background-color: var(--bg-main);
+    color: var(--text-primary);
+    font-family: "Inter", "Plus Jakarta Sans", "SF Pro Display", "SF Pro Text", -apple-system, BlinkMacSystemFont, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    overflow-x: hidden;
+  }
+}
+
+/* Fix dropdown options in dark theme */
+select option {
+  background-color: #FFFFFF;
+  color: #1E293B;
+}
+
+.dark select option {
+  background-color: #1E1E24 !important;
+  color: #F5F5F7 !important;
+}
+
+/* ═══════════════════════════════════════════════════════
+   Apple WWDC 2025 Ambient Layered Mesh Background
+   ═══════════════════════════════════════════════════════ */
+.apple-mesh-bg {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-color: var(--bg-main);
+  overflow: hidden;
+  transition: background-color 0.5s ease;
+}
+
+.apple-mesh-bg::before,
+.apple-mesh-bg::after {
+  content: '';
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(120px);
+  opacity: 0.35;
+  animation: liquidMeshFloat 50s infinite alternate ease-in-out;
+}
+
+.dark .apple-mesh-bg::before,
+.dark .apple-mesh-bg::after {
+  opacity: 0.25;
+}
+
+.apple-mesh-bg::before {
+  width: 750px;
+  height: 750px;
+  top: -120px;
+  left: -120px;
+  background: radial-gradient(circle, rgba(0, 122, 255, 0.22) 0%, rgba(191, 90, 242, 0.16) 40%, rgba(48, 209, 88, 0.1) 70%, rgba(242, 242, 247, 0) 100%);
+}
+
+.apple-mesh-bg::after {
+  width: 850px;
+  height: 850px;
+  bottom: -180px;
+  right: -120px;
+  background: radial-gradient(circle, rgba(48, 209, 88, 0.2) 0%, rgba(0, 122, 255, 0.18) 45%, rgba(255, 159, 10, 0.1) 70%, rgba(242, 242, 247, 0) 100%);
+  animation-delay: -25s;
+}
+
+.apple-mesh-blob-3 {
+  position: absolute;
+  width: 650px;
+  height: 650px;
+  top: 35%;
+  left: 28%;
+  border-radius: 50%;
+  filter: blur(130px);
+  opacity: 0.22;
+  background: radial-gradient(circle, rgba(255, 45, 85, 0.16) 0%, rgba(191, 90, 242, 0.18) 50%, rgba(242, 242, 247, 0) 80%);
+  animation: liquidMeshFloat 60s infinite alternate ease-in-out;
+  animation-delay: -12s;
+  pointer-events: none;
+}
+
+.dark .apple-mesh-blob-3 {
+  opacity: 0.18;
+}
+
+@keyframes liquidMeshFloat {
+  0% {
+    transform: translate(0, 0) scale(1);
+  }
+  33% {
+    transform: translate(50px, 60px) scale(1.06);
+  }
+  66% {
+    transform: translate(-30px, 90px) scale(0.96);
+  }
+  100% {
+    transform: translate(40px, -40px) scale(1.04);
+  }
+}
+
+/* ═══════════════════════════════════════════════════════
+   Apple Liquid Glass Primitives
+   ═══════════════════════════════════════════════════════ */
+.glass-panel {
+  background: rgba(255, 255, 255, 0.75);
+  backdrop-filter: blur(32px) saturate(180%);
+  -webkit-backdrop-filter: blur(32px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  box-shadow: 0 20px 60px rgba(15, 23, 42, 0.08), inset 0 1px 1px rgba(255, 255, 255, 0.8);
+  border-radius: 26px;
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.25s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.25s ease;
+}
+
+.dark .glass-panel {
+  background: rgba(24, 24, 28, 0.72);
+  backdrop-filter: blur(28px) saturate(180%);
+  -webkit-backdrop-filter: blur(28px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45), inset 0 1px 1px rgba(255, 255, 255, 0.12);
+}
+
+.glass-card {
+  background: rgba(255, 255, 255, 0.75);
+  backdrop-filter: blur(32px) saturate(180%);
+  -webkit-backdrop-filter: blur(32px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  box-shadow: 0 20px 60px rgba(15, 23, 42, 0.08), inset 0 1px 1px rgba(255, 255, 255, 0.8);
+  border-radius: 26px;
+  position: relative;
+  overflow: hidden;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.dark .glass-card {
+  background: rgba(24, 24, 28, 0.72);
+  backdrop-filter: blur(28px) saturate(180%);
+  -webkit-backdrop-filter: blur(28px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.35), inset 0 1px 1px rgba(255, 255, 255, 0.12);
+}
+
+/* Moving Specular Gloss Reflection Sweep */
+.glass-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -150%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.4),
+    transparent
+  );
+  transform: skewX(-25deg);
+  transition: left 0.85s ease;
+  pointer-events: none;
+}
+
+.glass-card:hover::before {
+  left: 150%;
+}
+
+.glass-card:hover {
+  transform: translateY(-4px) scale(1.015);
+  box-shadow: 0 24px 60px rgba(0, 122, 255, 0.14), inset 0 1px 1px rgba(255, 255, 255, 0.9);
+  border-color: rgba(0, 122, 255, 0.35);
+}
+
+.dark .glass-card:hover {
+  box-shadow: 0 24px 50px rgba(10, 132, 255, 0.22), inset 0 1px 1px rgba(255, 255, 255, 0.18);
+  border-color: rgba(10, 132, 255, 0.35);
+}
+
+/* Apple Active Pill Highlight */
+.apple-active-pill {
+  background: #007AFF;
+  color: #FFFFFF !important;
+  box-shadow: 0 8px 24px rgba(0, 122, 255, 0.4), inset 0 1px 1px rgba(255, 255, 255, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+}
+
+.dark .apple-active-pill {
+  background: #0A84FF;
+  box-shadow: 0 8px 25px rgba(10, 132, 255, 0.45), inset 0 1px 1px rgba(255, 255, 255, 0.25);
+}
+
+/* ═══════════════════════════════════════════════════════
+   Apple Liquid Buttons
+   ═══════════════════════════════════════════════════════ */
+.apple-btn-primary {
+  background: linear-gradient(180deg, #007AFF 0%, #0062CC 100%);
+  color: #FFFFFF !important;
+  border-radius: 14px;
+  font-weight: 600;
+  box-shadow: 0 4px 14px rgba(0, 122, 255, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.35);
+  transition: all 250ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.dark .apple-btn-primary {
+  background: linear-gradient(180deg, #0A84FF 0%, #0066D6 100%);
+  box-shadow: 0 4px 16px rgba(10, 132, 255, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.25);
+}
+
+.apple-btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0, 122, 255, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.4);
+  filter: brightness(1.04);
+}
+
+.apple-btn-primary:active {
+  transform: scale(0.98);
+  box-shadow: 0 2px 8px rgba(0, 122, 255, 0.3);
+}
+
+.apple-btn-secondary {
+  background: rgba(255, 255, 255, 0.75);
+  backdrop-filter: blur(20px);
+  color: #1E293B;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  border-radius: 14px;
+  font-weight: 600;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.06), inset 0 1px 0 rgba(255, 255, 255, 0.8);
+  transition: all 250ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.dark .apple-btn-secondary {
+  background: rgba(255, 255, 255, 0.08);
+  color: #F5F5F7;
+  border-color: rgba(255, 255, 255, 0.12);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.apple-btn-secondary:hover {
+  transform: translateY(-2px);
+  background: rgba(255, 255, 255, 0.95);
+  color: #1E293B;
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.1);
+  filter: brightness(1.04);
+}
+
+.dark .apple-btn-secondary:hover {
+  background: rgba(255, 255, 255, 0.15);
+  color: #F5F5F7;
+}
+
+.apple-btn-secondary:active {
+  transform: scale(0.98);
+}
+
+/* Apple Danger Button */
+.apple-btn-danger {
+  background: linear-gradient(180deg, #FF453A 0%, #D9342A 100%);
+  color: #FFFFFF !important;
+  border-radius: 14px;
+  font-weight: 600;
+  box-shadow: 0 4px 14px rgba(255, 69, 58, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  transition: all 250ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.apple-btn-danger:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(255, 69, 58, 0.45);
+}
+
+.apple-btn-danger:active {
+  transform: scale(0.98);
+}
+
+/* ═══════════════════════════════════════════════════════
+   Skeleton Shimmer Loading Animation
+   ═══════════════════════════════════════════════════════ */
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    rgba(0, 0, 0, 0.06) 25%,
+    rgba(0, 0, 0, 0.10) 37%,
+    rgba(0, 0, 0, 0.06) 63%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+  border-radius: 12px;
+}
+
+.dark .skeleton {
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.04) 25%,
+    rgba(255, 255, 255, 0.08) 37%,
+    rgba(255, 255, 255, 0.04) 63%
+  );
+  background-size: 200% 100%;
+}
+
+/* ═══════════════════════════════════════════════════════
+   HUD Camera Scanner Overlay
+   ═══════════════════════════════════════════════════════ */
+@keyframes scanLineMove {
+  0% {
+    top: 0%;
+  }
+  50% {
+    top: 100%;
+  }
+  100% {
+    top: 0%;
+  }
+}
+
+.hud-scanner-line {
+  position: absolute;
+  left: 5%;
+  right: 5%;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, #007AFF, transparent);
+  box-shadow: 0 0 15px rgba(0, 122, 255, 0.6), 0 0 30px rgba(0, 122, 255, 0.3);
+  animation: scanLineMove 3s ease-in-out infinite;
+  pointer-events: none;
+}
+
+.hud-corner {
+  position: absolute;
+  width: 24px;
+  height: 24px;
+  pointer-events: none;
+}
+
+.hud-corner-tl {
+  top: 8%;
+  left: 8%;
+  border-top: 3px solid #007AFF;
+  border-left: 3px solid #007AFF;
+  border-radius: 4px 0 0 0;
+}
+
+.hud-corner-tr {
+  top: 8%;
+  right: 8%;
+  border-top: 3px solid #007AFF;
+  border-right: 3px solid #007AFF;
+  border-radius: 0 4px 0 0;
+}
+
+.hud-corner-bl {
+  bottom: 8%;
+  left: 8%;
+  border-bottom: 3px solid #007AFF;
+  border-left: 3px solid #007AFF;
+  border-radius: 0 0 0 4px;
+}
+
+.hud-corner-br {
+  bottom: 8%;
+  right: 8%;
+  border-bottom: 3px solid #007AFF;
+  border-right: 3px solid #007AFF;
+  border-radius: 0 0 4px 0;
+}
+
+/* ═══════════════════════════════════════════════════════
+   iOS Toggle Switch
+   ═══════════════════════════════════════════════════════ */
+.toggle-switch {
+  position: relative;
+  width: 51px;
+  height: 31px;
+  border-radius: 15.5px;
+  background: #78788033;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  cursor: pointer;
+  transition: background 0.3s ease;
+  flex-shrink: 0;
+}
+
+.dark .toggle-switch {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+.toggle-switch.active {
+  background: #30D158;
+  border-color: transparent;
+}
+
+.toggle-switch .toggle-thumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 27px;
+  height: 27px;
+  border-radius: 50%;
+  background: #FFFFFF;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.15), 0 1px 1px rgba(0, 0, 0, 0.06);
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.toggle-switch.active .toggle-thumb {
+  transform: translateX(20px);
+}
+
+/* ═══════════════════════════════════════════════════════
+   Table Row Hover Glow
+   ═══════════════════════════════════════════════════════ */
+.table-row-hover {
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.table-row-hover:hover {
+  background: rgba(0, 122, 255, 0.04) !important;
+}
+
+.dark .table-row-hover:hover {
+  background: rgba(10, 132, 255, 0.06) !important;
+}
+
+/* ═══════════════════════════════════════════════════════
+   Badge Glow Variant
+   ═══════════════════════════════════════════════════════ */
+@keyframes badgePulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+.badge-pulse {
+  animation: badgePulse 2s ease-in-out infinite;
+}
+
+.badge-glow-danger {
+  box-shadow: 0 0 10px rgba(255, 69, 58, 0.35);
+}
+
+.badge-glow-warning {
+  box-shadow: 0 0 10px rgba(255, 159, 10, 0.35);
+}
+
+.badge-glow-success {
+  box-shadow: 0 0 10px rgba(48, 209, 88, 0.35);
+}
+
+.badge-glow-info {
+  box-shadow: 0 0 10px rgba(0, 122, 255, 0.35);
+}
+
+/* ═══════════════════════════════════════════════════════
+   Counter Animation
+   ═══════════════════════════════════════════════════════ */
+@keyframes countUp {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.counter-animate {
+  animation: countUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* ═══════════════════════════════════════════════════════
+   Floating Orb Animation (Login Page)
+   ═══════════════════════════════════════════════════════ */
+@keyframes floatOrb {
+  0%, 100% {
+    transform: translate(0, 0) scale(1);
+  }
+  25% {
+    transform: translate(30px, -40px) scale(1.1);
+  }
+  50% {
+    transform: translate(-20px, 20px) scale(0.95);
+  }
+  75% {
+    transform: translate(15px, 35px) scale(1.05);
+  }
+}
+
+.login-orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
+  pointer-events: none;
+  animation: floatOrb 20s infinite ease-in-out;
+}
+
+/* ═══════════════════════════════════════════════════════
+   Pulse Ring (Scan Button)
+   ═══════════════════════════════════════════════════════ */
+@keyframes pulseRing {
+  0% {
+    transform: scale(1);
+    opacity: 0.5;
+  }
+  100% {
+    transform: scale(1.6);
+    opacity: 0;
+  }
+}
+
+.pulse-ring-wrap {
+  position: relative;
+}
+
+.pulse-ring-wrap::before,
+.pulse-ring-wrap::after {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  border-radius: 16px;
+  border: 2px solid #007AFF;
+  animation: pulseRing 2s cubic-bezier(0, 0, 0.2, 1) infinite;
+  pointer-events: none;
+}
+
+.pulse-ring-wrap::after {
+  animation-delay: 0.5s;
+}
+
+/* ═══════════════════════════════════════════════════════
+   Danger Zone Card
+   ═══════════════════════════════════════════════════════ */
+.danger-zone-card {
+  background: rgba(255, 69, 58, 0.06);
+  border: 1px solid rgba(255, 69, 58, 0.2);
+  border-radius: 22px;
+}
+
+.dark .danger-zone-card {
+  background: rgba(255, 69, 58, 0.08);
+  border-color: rgba(255, 69, 58, 0.25);
+}
+
+/* ═══════════════════════════════════════════════════════
+   Sidebar Tooltip
+   ═══════════════════════════════════════════════════════ */
+.sidebar-tooltip {
+  position: absolute;
+  left: calc(100% + 12px);
+  top: 50%;
+  transform: translateY(-50%);
+  white-space: nowrap;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 10px;
+  background: rgba(15, 23, 42, 0.92);
+  color: #FFFFFF;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  z-index: 999;
+}
+
+.sidebar-tooltip::before {
+  content: '';
+  position: absolute;
+  left: -4px;
+  top: 50%;
+  transform: translateY(-50%) rotate(45deg);
+  width: 8px;
+  height: 8px;
+  background: rgba(15, 23, 42, 0.92);
+}
+
+/* ═══════════════════════════════════════════════════════
+   Custom Scrollbar
+   ═══════════════════════════════════════════════════════ */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(142, 142, 147, 0.35);
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(142, 142, 147, 0.55);
+}

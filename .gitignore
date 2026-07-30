@@ -1,0 +1,41 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache/
+
+# Virtual Environments
+.venv/
+venv/
+venv310/
+backend/.venv/
+backend/venv310/
+
+# Node & Frontend Build
+node_modules/
+frontend/node_modules/
+frontend/dist/
+frontend/build/
+
+# Environment Variables & Local Configs
+.env
+*.env.local
+backend/.env
+frontend/.env
+
+# Application Storage & Local Dynamic Artifacts
+backend/storage/uploads/*
+!backend/storage/uploads/.gitkeep
+backend/storage/training/*
+!backend/storage/training/.gitkeep
+backend/storage/vector_store/*
+!backend/storage/vector_store/.gitkeep
+*.log
+*.sqlite3
+
+# Operating System & IDE Files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

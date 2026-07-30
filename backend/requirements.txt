@@ -1,0 +1,51 @@
+# ── AttendGuard 3.0 Backend Dependencies ──────────────────────────────────
+
+# Core Framework
+fastapi==0.115.12
+uvicorn[standard]==0.34.3
+python-multipart==0.0.20
+
+# Database
+motor==3.7.0
+pymongo==4.12.1
+
+# Validation & Configuration
+pydantic==2.11.3
+pydantic-settings==2.9.1
+
+# Authentication
+python-jose[cryptography]==3.4.0
+passlib[bcrypt]==1.7.4
+bcrypt==4.3.0
+google-auth==2.38.0
+email-validator==2.3.0
+
+# HTTP
+httpx==0.28.1
+
+# Environment
+python-dotenv==1.1.0
+
+# Computer Vision
+insightface==0.7.3
+onnxruntime==1.22.0
+opencv-python-headless==4.11.0.86
+numpy==2.2.6
+Pillow==11.2.1
+
+# AI / LLM Engine (LangGraph + Qwen / Ollama + FAISS RAG)
+ollama==0.4.8
+langgraph==1.2.10
+langchain-core==1.5.2
+faiss-cpu==1.14.3
+sentence-transformers==3.4.1
+
+# Logging
+# structlog==25.1.0  # Optional: using stdlib logging for now
+
+# Legacy (kept for backward compatibility during migration)
+# flask
+# flask-cors
+# flask-jwt-extended
+# face_recognition
+# dlib-bin

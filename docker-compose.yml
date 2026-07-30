@@ -1,0 +1,52 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: attendguard_backend
+    restart: always
+    environment:
+      - PORT=5000
+      - MONGODB_URL=mongodb://mongodb:27017/GuardDB
+      - REDIS_URL=redis://redis:6379/0
+      - LLM_PROVIDER=ollama
+      - OLLAMA_BASE_URL=http://host.docker.internal:11434
+    ports:
+      - "5000:5000"
+    depends_on:
+      - mongodb
+      - redis
+    volumes:
+      - ./backend/storage:/app/storage
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: attendguard_frontend
+    restart: always
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+
+  mongodb:
+    image: mongo:6.0
+    container_name: attendguard_mongodb
+    restart: always
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+
+  redis:
+    image: redis:7-alpine
+    container_name: attendguard_redis
+    restart: always
+    ports:
+      - "6379:6379"
+
+volumes:
+  mongo_data:

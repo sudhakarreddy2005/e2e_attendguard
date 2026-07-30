@@ -1,0 +1,41 @@
+# debug_face.py
+# test_match.py
+# verify_backend.py
+# validate_pipeline.py
+
+# __pycache__
+# *.pyc
+# *.pyo
+# *.pyd
+# .env
+# .git
+# tests
+# debug*
+# validate*
+# verify*
+# *.jpg
+# *.png
+# *.mp4
+
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+
+.env
+.git
+.gitignore
+venv
+venv310
+
+tests
+debug*
+validate*
+verify*
+
+*.jpg
+*.png
+*.mp4
+*.log
+*.csv
+*.npy
