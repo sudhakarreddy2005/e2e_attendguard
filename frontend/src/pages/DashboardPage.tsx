@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Users, AlertTriangle, Activity, Building, ArrowUpRight, Scan, UserCheck } from 'lucide-react';
+import { Users, AlertTriangle, Activity, Building, ArrowUpRight, Building2 } from 'lucide-react';
 import { StatCard } from '../components/ui/StatCard';
 import { Badge } from '../components/ui/Badge';
 import { Skeleton } from '../components/ui/Skeleton';
@@ -57,15 +57,29 @@ export const DashboardPage: React.FC = () => {
               Real-time attendance violation intelligence, face recognition matrix, and institutional security monitoring.
             </p>
           </div>
-          <div className="flex flex-wrap items-center gap-3 shrink-0">
-            <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} onClick={() => navigate('/detect')} className="apple-btn-primary flex items-center gap-2 px-4 py-2.5 text-xs font-semibold shadow-md">
-              <Scan className="w-4 h-4 text-white" strokeWidth={2} /><span>Live Scanner</span>
-            </motion.button>
-            {user?.role === 'super_admin' && (
-              <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} onClick={() => navigate('/users')} className="apple-btn-secondary flex items-center gap-2 px-4 py-2.5 text-xs font-semibold">
-                <UserCheck className="w-4 h-4 text-[#007AFF] dark:text-[#0A84FF]" strokeWidth={2} /><span>Manage Users</span>
-              </motion.button>
-            )}
+
+          {/* VVIT Institutional Brand Identity Card */}
+          <div className="shrink-0">
+            <div className="glass-card px-5 py-3.5 rounded-2xl border border-white/60 dark:border-white/10 bg-white/70 dark:bg-white/[0.04] flex items-center gap-3.5 shadow-xs backdrop-blur-xl">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-[#0078D4] via-[#00A4EF] to-[#5C2D91] p-0.5 shadow-md flex items-center justify-center">
+                <div className="w-full h-full bg-slate-950/85 rounded-[10px] flex items-center justify-center">
+                  <Building2 className="w-5 h-5 text-[#00A4EF]" strokeWidth={2} />
+                </div>
+              </div>
+              <div className="text-left">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-extrabold tracking-tight text-slate-800 dark:text-white">
+                    VVIT Campus
+                  </span>
+                  <span className="px-2 py-0.5 rounded-full text-[9px] font-extrabold uppercase bg-[#0078D4]/15 text-[#0078D4] dark:text-[#2896F3] border border-[#0078D4]/30">
+                    @vvit.net
+                  </span>
+                </div>
+                <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400 mt-0.5">
+                  Vasireddy Venkatadri Institute of Technology
+                </p>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -148,7 +162,7 @@ export const DashboardPage: React.FC = () => {
             </div>
           )) : data?.recent_activity?.slice(0, 5).map((item, index) => (
             <motion.div key={index} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: index * 0.04, duration: 0.2 }} whileHover={{ y: -1 }}
-              className="p-3.5 rounded-2xl bg-white/40 dark:bg-white/[0.03] border border-white/60 dark:border-white/10 flex items-center justify-between hover:bg-white/80 dark:hover:bg-white/[0.08] backdrop-blur-md transition-all shadow-xs">
+              className="p-3.5 rounded-2xl bg-white/40 dark:bg-white/[0.03] border border-white/60 dark:border-white/10 flex items-center justify-between hover:bg-[#007AFF]/10 dark:hover:bg-white/[0.08] backdrop-blur-md transition-all shadow-xs">
               <div className="flex items-center gap-3.5">
                 <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-[#007AFF] to-[#00C6FF] text-white font-bold text-xs flex items-center justify-center shadow-xs border border-white/20">{item.roll_no.slice(-3)}</div>
                 <div>

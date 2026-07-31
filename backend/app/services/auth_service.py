@@ -1,5 +1,5 @@
 """
-Authentication service — business logic for Google OAuth SSO, User Management, and RBAC.
+Authentication service — business logic for Microsoft Entra ID SSO, User Management, and RBAC.
 """
 
 from typing import Optional, List, Dict, Any
@@ -16,7 +16,6 @@ from app.core.security import (
     verify_password,
     VALID_ROLES,
 )
-from app.core.auth_providers.google_provider import GoogleAuthProvider
 from app.core.auth_providers.entra_provider import EntraIDAuthProvider
 from app.repositories.user_repository import user_repo
 from app.repositories.role_repository import role_repo
@@ -35,13 +34,13 @@ class AuthService:
     ) -> dict:
         """
         Authenticate a user via Microsoft Entra ID (Azure AD).
-        Auto-provisions SUPER_ADMIN for '23BQ1A05A9@vvit.net' on first login.
+        Auto-provisions accounts for all official @vvit.net Microsoft logins.
         Validates @vvit.net domain, checks account active status, and logs audit events.
         """
         provider = EntraIDAuthProvider()
         profile = await provider.verify_token(id_token)
 
-        email = profile["email"]
+        email = profile["email"].lower().strip()
         name = profile["name"]
         azure_oid = profile["oid"]
         azure_tenant_id = profile.get("tenant_id")
@@ -50,33 +49,49 @@ class AuthService:
         # 1. Search existing user in 'users' collection
         user = await user_repo.find_by_email(email)
 
+        # 2. Auto-provision if user does not exist yet in MongoDB
         if not user:
             import re
-            is_student_roll_email = bool(re.match(r"^[0-9]{2}[a-zA-Z0-9]{8}@vvit\.net$", email.strip(), re.IGNORECASE))
-            if is_student_roll_email:
-                roll_no = email.split("@")[0].upper()
-                user = {
-                    "email": email.lower().strip(),
-                    "name": name or roll_no,
-                    "role": "STUDENT",
-                    "department": "CSE",
-                    "is_active": True,
-                    "auth_provider": "microsoft_entra",
-                    "created_at": datetime.now(timezone.utc).isoformat(),
-                }
-                await user_repo.insert_one(user)
-            else:
-                # Reject login for unprovisioned staff accounts
-                await audit_repo.log_action(
-                    user=email,
-                    action="login_rejected",
-                    entity_type="user",
-                    description=f"Unprovisioned user '{email}' attempted Microsoft Entra ID login",
-                    ip_address=ip_address,
-                )
-                raise AuthenticationError("Your account has not been provisioned. Please contact the system administrator.")
+            is_super_admin_email = (email == settings.SUPER_ADMIN_EMAIL.lower())
+            is_student_roll = bool(re.match(r"^[0-9]{2}[a-zA-Z0-9]{8}@vvit\.net$", email, re.IGNORECASE))
 
-        # 2. Verify active status
+            if is_super_admin_email:
+                assigned_role = "SUPER_ADMIN"
+            elif "security" in email or "gate" in email:
+                assigned_role = "SECURITY"
+            elif "deo" in email:
+                assigned_role = "DEO"
+            elif "principal" in email:
+                assigned_role = "PRINCIPAL"
+            elif "hod" in email:
+                assigned_role = "HOD"
+            elif is_student_roll:
+                assigned_role = "STUDENT"
+            else:
+                assigned_role = "FACULTY"
+
+            user = {
+                "user_id": email,
+                "email": email,
+                "name": name or email.split("@")[0],
+                "role": assigned_role,
+                "department": "CSE" if assigned_role == "STUDENT" else "Institutional Operations",
+                "designation": "Institutional Staff" if assigned_role != "STUDENT" else "Enrolled Student",
+                "is_active": True,
+                "active": True,
+                "status": "active",
+                "auth_provider": "microsoft_entra",
+                "azure_oid": azure_oid,
+                "azure_tenant_id": azure_tenant_id,
+                "profile_photo": picture,
+                "created_at": datetime.now(timezone.utc).isoformat(),
+                "login_count": 0,
+            }
+            db_id = await user_repo.insert_one(user)
+            user = await user_repo.find_by_email(email)
+            logger.info("Auto-provisioned Microsoft Entra ID user: %s (role: %s)", email, assigned_role)
+
+        # 3. Verify active status
         is_active = user.get("is_active", True) and user.get("active", True) and user.get("status") != "disabled"
         if not is_active:
             await audit_repo.log_action(
@@ -88,14 +103,14 @@ class AuthService:
             )
             raise AuthenticationError("User account has been disabled by Administrator")
 
-        # 3. Determine role and load permissions from roles collection
-        is_super_admin_email = (email.lower() == settings.SUPER_ADMIN_EMAIL.lower())
+        # 4. Determine role and load permissions from roles collection
+        is_super_admin_email = (email == settings.SUPER_ADMIN_EMAIL.lower())
         role = "SUPER_ADMIN" if is_super_admin_email else (user.get("role") or "STUDENT").upper()
         permissions = await role_repo.get_permissions_for_role(role)
 
         # Update last login details
         await user_repo.update_one(
-            {"email": email.lower().strip()},
+            {"email": email},
             {
                 "$set": {
                     "name": name or user.get("name"),
@@ -139,123 +154,10 @@ class AuthService:
             "department": department,
             "username": email,
             "email": email,
-            "name": name,
-            "display_name": name,
-            "profile_photo": picture,
+            "name": name or user.get("name"),
+            "display_name": name or user.get("name"),
+            "profile_photo": picture or user.get("profile_photo"),
             "azure_oid": azure_oid,
-        }
-
-
-    @staticmethod
-    async def google_sso_login(id_token: str, ip_address: Optional[str] = None) -> dict:
-        """
-        Authenticate a user via Google OAuth 2.0.
-        Auto-provisions SUPER_ADMIN for '23BQ1A05A9@vvit.net' on first login.
-        """
-        provider = GoogleAuthProvider()
-        profile = await provider.verify_token(id_token)
-
-        email = profile["email"]
-        name = profile["name"]
-        google_id = profile["id"]
-        picture = profile.get("picture")
-
-        # 1. Search existing user in 'users' collection
-        user = await user_repo.find_by_email(email)
-
-        # Super Admin Auto-Provisioning Check
-        is_super_admin_email = (email.lower() == settings.SUPER_ADMIN_EMAIL.lower())
-
-        if not user:
-            # Auto-provision new user with specific institutional role parsing
-            if is_super_admin_email:
-                assigned_role = "super_admin"
-            elif "security" in email.lower() or "gate" in email.lower():
-                assigned_role = "security"
-            elif "deo" in email.lower():
-                assigned_role = "deo"
-            elif "principal" in email.lower():
-                assigned_role = "principal"
-            elif "hod" in email.lower():
-                assigned_role = "hod"
-            elif email.startswith("23") or email.startswith("24"):
-                assigned_role = "student"
-            else:
-                assigned_role = "faculty"
-            user_doc = {
-                "user_id": email,
-                "email": email,
-                "name": name,
-                "role": assigned_role,
-                "auth_provider": "google",
-                "google_id": google_id,
-                "profile_photo": picture,
-                "is_active": True,
-                "status": "active",
-                "last_login": datetime.now(timezone.utc).isoformat(),
-                "last_login_ip": ip_address,
-                "login_count": 1,
-            }
-            db_id = await user_repo.insert_one(user_doc)
-            user = await user_repo.find_by_id(db_id)
-            logger.info("Auto-provisioned Google SSO user: %s (role: %s)", email, assigned_role)
-        else:
-            # Update user info if needed
-            if not user.get("is_active"):
-                raise AuthenticationError("User account has been disabled by Administrator")
-
-            # Force/update role based on email pattern or existing user role
-            if is_super_admin_email:
-                new_role = "super_admin"
-            elif "security" in email.lower() or "gate" in email.lower():
-                new_role = "security"
-            elif "deo" in email.lower():
-                new_role = "deo"
-            elif "principal" in email.lower():
-                new_role = "principal"
-            elif "hod" in email.lower():
-                new_role = "hod"
-            else:
-                new_role = user.get("role", "faculty")
-
-            await user_repo.update_one(
-                {"email": email},
-                {
-                    "$set": {
-                        "name": name or user.get("name"),
-                        "google_id": google_id,
-                        "profile_photo": picture or user.get("profile_photo"),
-                        "role": new_role,
-                        "last_login": datetime.now(timezone.utc).isoformat(),
-                        "last_login_ip": ip_address,
-                    },
-                    "$inc": {"login_count": 1},
-                },
-            )
-            user["role"] = new_role
-
-        role = user.get("role", "faculty")
-        access_token = create_access_token(subject=email, role=role)
-        refresh_token = create_refresh_token(subject=email, role=role)
-
-        # Audit log
-        await audit_repo.log_action(
-            user=email,
-            action="login_sso",
-            entity_type="user",
-            description=f"User '{email}' logged in via Google SSO (role: {role})",
-            ip_address=ip_address,
-        )
-
-        return {
-            "access_token": access_token,
-            "refresh_token": refresh_token,
-            "role": role,
-            "username": email,
-            "email": email,
-            "name": name,
-            "display_name": name,
-            "profile_photo": picture,
         }
 
     @staticmethod
@@ -281,11 +183,11 @@ class AuthService:
             "email": email,
             "name": name or email.split("@")[0],
             "role": role,
-            "auth_provider": "google",
+            "auth_provider": "microsoft_entra",
             "department": department or "",
             "designation": designation or "",
             "is_active": True,
-            "status": "pending_invite",
+            "status": "active",
             "login_count": 0,
         }
 
@@ -342,6 +244,59 @@ class AuthService:
         return True
 
     @staticmethod
+    async def delete_user(target_email: str, deleted_by: str) -> bool:
+        """Delete user account and maintain database integrity across collections."""
+        target_clean = target_email.lower().strip()
+        prefix_username = target_clean.split("@")[0]
+
+        # 1. Delete from users collection
+        user_deleted = await user_repo.delete_one({
+            "$or": [
+                {"email": target_clean},
+                {"user_id": target_clean},
+                {"username": target_clean},
+                {"email": {"$regex": f"^{target_clean}$", "$options": "i"}},
+                {"username": {"$regex": f"^{prefix_username}$", "$options": "i"}},
+            ]
+        })
+
+        # 2. Delete from admins collection if present
+        admin_deleted = await admin_repo.delete_one({
+            "$or": [
+                {"email": target_clean},
+                {"username": target_clean},
+                {"username": prefix_username},
+                {"email": {"$regex": f"^{target_clean}$", "$options": "i"}},
+                {"username": {"$regex": f"^{prefix_username}$", "$options": "i"}},
+            ]
+        })
+
+        # 3. Fallback scan if not matched directly
+        if not user_deleted and not admin_deleted:
+            all_users = await user_repo.find_many({})
+            all_admins = await admin_repo.find_many({})
+            matched_user = next((u for u in all_users if str(u.get("email", "")).lower() == target_clean or str(u.get("user_id", "")).lower() == target_clean), None)
+            matched_admin = next((a for a in all_admins if str(a.get("email", "")).lower() == target_clean or str(a.get("username", "")).lower() == target_clean or str(a.get("username", "")).lower() == prefix_username), None)
+
+            if matched_user:
+                await user_repo.delete_one({"_id": matched_user["_id"]})
+                user_deleted = True
+            if matched_admin:
+                await admin_repo.delete_one({"_id": matched_admin["_id"]})
+                admin_deleted = True
+
+        if not user_deleted and not admin_deleted:
+            raise NotFoundError(f"User '{target_email}' not found")
+
+        await audit_repo.log_action(
+            user=deleted_by,
+            action="delete_user",
+            entity_type="user",
+            description=f"Deleted user account '{target_clean}' from GuardDB collections",
+        )
+        return True
+
+    @staticmethod
     async def list_users(limit: int = 100, skip: int = 0) -> List[dict]:
         """List all registered institutional users and IT administrators."""
         users = await user_repo.find_many({}, limit=limit, skip=skip)
@@ -360,16 +315,15 @@ class AuthService:
                     "username": admin_user,
                     "email": admin_email,
                     "name": a.get("display_name") or "IT Administrator",
-                    "role": a.get("role", "admin"),
+                    "role": a.get("role", "SUPER_ADMIN"),
                     "department": a.get("department") or "IT Operations",
                     "designation": "System Administrator",
-                    "auth_provider": "local_admin",
+                    "auth_provider": "microsoft_entra",
                     "is_active": a.get("status") != "disabled",
                     "status": a.get("status") or "active",
                     "login_count": a.get("login_count", 0),
                 })
 
-        # Filter out invalid documents without email/username or valid role
         valid_users = [u for u in users if u.get("email") or u.get("user_id")]
         return formatted_admins + valid_users
 
@@ -378,7 +332,6 @@ class AuthService:
         """Verify IT Admin local credentials."""
         user = await admin_repo.find_by_username(username)
         if not user:
-            # Fallback check in users collection
             user = await user_repo.find_by_email(username)
             if not user or not user.get("password_hash"):
                 return None
@@ -397,7 +350,7 @@ class AuthService:
         if not user:
             raise AuthenticationError("Invalid username or password")
 
-        role = user.get("role", "admin")
+        role = user.get("role", "SUPER_ADMIN")
         email = user.get("email") or user.get("username", username)
 
         access_token = create_access_token(subject=email, role=role)
@@ -426,10 +379,7 @@ class AuthService:
         """Seed default IAM roles and initial Super Admin user if not present."""
         admin_email = settings.SUPER_ADMIN_EMAIL.lower().strip()
         try:
-            # Seed 6 default IAM roles into roles collection
             await role_repo.seed_default_roles()
-
-            # Ensure Super Admin account is provisioned in users collection
             existing_admin = await user_repo.find_by_email(admin_email)
             if not existing_admin:
                 user_doc = {

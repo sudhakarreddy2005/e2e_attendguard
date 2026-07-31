@@ -4,7 +4,6 @@ Authentication API Endpoints.
 
 from fastapi import APIRouter, Depends, Request
 from pydantic import BaseModel, Field
-from typing import Optional
 
 from app.api.deps import require_auth
 from app.core.security import TokenPayload
@@ -13,10 +12,6 @@ from app.services.auth_service import AuthService
 
 class MicrosoftLoginRequest(BaseModel):
     id_token: str = Field(description="Microsoft Entra ID (Azure AD) OpenID Connect token")
-
-
-class GoogleLoginRequest(BaseModel):
-    id_token: str = Field(description="Google OpenID Connect ID token")
 
 
 class LoginRequest(BaseModel):
@@ -42,15 +37,6 @@ async def microsoft_login(request_body: MicrosoftLoginRequest, request: Request)
         user_agent=user_agent
     )
     return {"success": True, "data": result}
-
-
-@router.post("/google")
-async def google_login(request_body: GoogleLoginRequest, request: Request):
-    """Authenticate or auto-provision institutional user via Google OAuth 2.0."""
-    client_ip = request.client.host if request.client else None
-    result = await AuthService.google_sso_login(request_body.id_token, ip_address=client_ip)
-    return {"success": True, "data": result}
-
 
 
 @router.post("/login")

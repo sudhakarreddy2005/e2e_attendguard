@@ -94,7 +94,7 @@ async def delete_user(
     user_email: str,
     current_user: TokenPayload = Depends(require_permission("users.manage")),
 ):
-    """Delete a user account."""
+    """Delete a user account with database integrity checks."""
     target_clean = user_email.lower().strip()
     if target_clean == current_user.email.lower().strip():
         raise HTTPException(
@@ -102,20 +102,8 @@ async def delete_user(
             detail="Cannot delete your own active administrator account",
         )
 
-    deleted = await user_repo.delete_one({"email": target_clean})
-    if not deleted:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"User '{user_email}' not found",
-        )
-
-    await audit_repo.log_action(
-        user=current_user.sub,
-        action="user_deleted",
-        entity_type="user",
-        description=f"Deleted user account '{target_clean}'",
-    )
-    return {"success": True, "message": f"User {user_email} deleted successfully"}
+    await AuthService.delete_user(target_email=target_clean, deleted_by=current_user.sub)
+    return {"success": True, "message": f"User '{user_email}' deleted successfully"}
 
 
 @router.get("/audit-logs")

@@ -12,10 +12,11 @@ export const msalConfig: Configuration = {
     navigateToLoginRequestUrl: false,
   },
   cache: {
-    cacheLocation: 'localStorage',
-    storeAuthStateInCookie: true, // Use cookies for safer popup & redirect state sharing
+    cacheLocation: 'sessionStorage',
+    storeAuthStateInCookie: true,
   },
   system: {
+    allowNativeBroker: false,
     loggerOptions: {
       loggerCallback: (level, message, containsPii) => {
         if (containsPii) return;
@@ -41,7 +42,6 @@ export const msalConfig: Configuration = {
 
 export const msalInstance = new PublicClientApplication(msalConfig);
 
-// Initialize MSAL eagerly
 msalInstance.initialize().catch((err) => {
   console.error('MSAL initialization failed:', err);
 });

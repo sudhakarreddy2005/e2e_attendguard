@@ -6,12 +6,6 @@ export const authService = {
     return res.data;
   },
 
-  googleLogin: async (idToken: string): Promise<any> => {
-    const res = await apiClient.post('/api/auth/google', { id_token: idToken });
-    return res.data;
-  },
-
-
   login: async (username: string, password: string): Promise<any> => {
     const res = await apiClient.post('/api/auth/login', { username, password });
     return res.data;
@@ -45,12 +39,17 @@ export const authService = {
   },
 
   updateUserRole: async (email: string, role: string): Promise<any> => {
-    const res = await apiClient.patch(`/api/users/${email}/role`, { role });
+    const res = await apiClient.patch(`/api/users/${encodeURIComponent(email)}/role`, { role });
     return res.data;
   },
 
   toggleUserStatus: async (email: string, isActive: boolean): Promise<any> => {
-    const res = await apiClient.patch(`/api/users/${email}/status`, { is_active: isActive });
+    const res = await apiClient.patch(`/api/users/${encodeURIComponent(email)}/status`, { is_active: isActive });
+    return res.data;
+  },
+
+  deleteUser: async (email: string): Promise<any> => {
+    const res = await apiClient.delete(`/api/users/${encodeURIComponent(email)}`);
     return res.data;
   },
 

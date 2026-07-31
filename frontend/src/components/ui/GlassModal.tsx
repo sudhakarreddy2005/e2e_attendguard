@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X } from 'lucide-react';
 
@@ -11,15 +11,16 @@ interface GlassModalProps {
   maxWidth?: string;
 }
 
-export const GlassModal: React.FC<GlassModalProps> = ({
+export const GlassModal = forwardRef<HTMLDivElement, GlassModalProps>(({
   isOpen,
   onClose,
   title,
   subtitle,
   children,
   maxWidth = 'max-w-md',
-}) => {
+}, ref) => {
   const backdropRef = useRef<HTMLDivElement>(null);
+  useImperativeHandle(ref, () => backdropRef.current as HTMLDivElement);
 
   useEffect(() => {
     const handleEsc = (e: KeyboardEvent) => {
@@ -73,7 +74,7 @@ export const GlassModal: React.FC<GlassModalProps> = ({
                 </div>
                 <button
                   onClick={onClose}
-                  className="p-2 rounded-xl hover:bg-black/5 dark:hover:bg-white/10 text-[#64748B] hover:text-[#1E293B] dark:text-slate-400 dark:hover:text-white transition-colors"
+                  className="p-2 rounded-xl hover:bg-black/5 dark:hover:bg-white/10 text-[#64748B] hover:text-[#1E293B] dark:text-slate-400 dark:hover:text-white transition-colors cursor-pointer"
                 >
                   <X className="w-4 h-4" strokeWidth={2.5} />
                 </button>
@@ -87,4 +88,6 @@ export const GlassModal: React.FC<GlassModalProps> = ({
       )}
     </AnimatePresence>
   );
-};
+});
+
+GlassModal.displayName = 'GlassModal';
