@@ -16,11 +16,13 @@ ADMINS = "admins"
 DEPARTMENTS = "departments"
 SETTINGS = "settings"
 AUDIT_LOGS = "audit_logs"
+ROLES = "roles"
 NOTIFICATIONS = "notifications"
 ANALYTICS_CACHE = "analytics_cache"
 
 ALL_COLLECTIONS = [
     USERS,
+    ROLES,
     STUDENTS,
     FACE_EMBEDDINGS,
     ATTENDANCE_LOGS,

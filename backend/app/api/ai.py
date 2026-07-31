@@ -6,7 +6,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 
-from app.api.deps import require_auth
+from app.api.deps import require_permission
 from app.core.security import TokenPayload
 from app.services.ai_service import AIService
 
@@ -28,7 +28,7 @@ router = APIRouter(prefix="/api/ai", tags=["AI Assistant"])
 @router.post("/query")
 async def query_ai(
     request: QueryRequest,
-    user: TokenPayload = Depends(require_auth),
+    user: TokenPayload = Depends(require_permission("ai.chat")),
 ):
     """Execute AI query through Master Agent."""
     return await AIService.query_assistant(prompt=request.query, session_id=request.session_id or "default_session")
@@ -37,7 +37,7 @@ async def query_ai(
 @router.post("/chat")
 async def chat_ai(
     request: QueryRequest,
-    user: TokenPayload = Depends(require_auth),
+    user: TokenPayload = Depends(require_permission("ai.chat")),
 ):
     """Multi-turn conversational chat endpoint."""
     return await AIService.query_assistant(prompt=request.query, session_id=request.session_id or "default_session")
@@ -46,7 +46,7 @@ async def chat_ai(
 @router.post("/rag/index")
 async def index_document(
     request: RAGIndexRequest,
-    user: TokenPayload = Depends(require_auth),
+    user: TokenPayload = Depends(require_permission("ai.chat")),
 ):
     """Index institutional document text into FAISS vector store."""
     return await AIService.index_rag_document(
@@ -59,7 +59,7 @@ async def index_document(
 @router.post("/rag/search")
 async def search_rag_store(
     query: str,
-    user: TokenPayload = Depends(require_auth),
+    user: TokenPayload = Depends(require_permission("ai.chat")),
 ):
     """Search institutional policy FAISS vector store."""
     return await AIService.search_rag(query=query)

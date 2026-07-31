@@ -7,7 +7,7 @@ The storage folder is organized into two separate directories to ensure data int
 backend/storage/
 ├── training/     ← Student registration images (used to train LBPH model)
 ├── uploads/      ← Captured violation images (used only for matching and reporting)
-├── model.yml     ← Trained LBPH face recognizer model
+├── 
 └── labels.json   ← Label-to-student_id mapping
 ```
 

@@ -10,7 +10,20 @@ class StudentRepository(BaseRepository):
     collection_name = C.STUDENTS
 
     async def find_by_roll_no(self, roll_no: str) -> Optional[dict]:
-        return await self.find_one({"roll_no": roll_no.upper()})
+        clean_roll = roll_no.upper().strip()
+        alt_roll = clean_roll.replace("0", "O") if "0" in clean_roll else clean_roll.replace("O", "0")
+        email_pattern = f"{clean_roll.lower()}@vvit.net"
+
+        query = {
+            "$or": [
+                {"roll_no": clean_roll},
+                {"roll_no": alt_roll},
+                {"contact_info.email": email_pattern},
+                {"email": email_pattern},
+                {"roll_no": {"$regex": f"^{clean_roll}$", "$options": "i"}},
+            ]
+        }
+        return await self.find_one(query)
 
     async def find_by_department_section(
         self, department: str, section: Optional[str] = None

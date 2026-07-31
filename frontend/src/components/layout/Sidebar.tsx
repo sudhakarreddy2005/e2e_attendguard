@@ -10,6 +10,7 @@ import {
   LogOut,
   ShieldCheck,
   UserCheck,
+  GraduationCap,
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -20,33 +21,35 @@ interface SidebarProps {
 
 export const Sidebar: React.FC<SidebarProps> = () => {
   const [isHovered, setIsHovered] = useState(false);
-  const { user, logout } = useAuth();
+  const { user, logout, hasPermission } = useAuth();
   const navigate = useNavigate();
 
-  const rawRole = (user?.role || 'faculty').toLowerCase().replace(/[^a-z0-9]/g, '');
   const isExpanded = isHovered;
 
   const formatRoleDisplay = (r?: string) => {
-    if (!r) return 'Faculty';
-    const norm = r.toLowerCase().replace(/[^a-z0-9]/g, '');
-    if (norm.includes('security')) return 'Security Staff';
-    if (norm === 'superadmin') return 'Super Admin';
-    if (norm === 'hod') return 'HOD';
-    if (norm === 'deo') return 'DEO';
-    return r.charAt(0).toUpperCase() + r.slice(1).replace('_', ' ');
+    if (!r) return 'User';
+    const norm = r.toUpperCase().replace(/[^A-Z0-9]/g, '');
+    if (norm === 'SUPERADMIN') return 'Super Admin';
+    if (norm === 'PRINCIPAL') return 'Principal';
+    if (norm === 'HOD') return 'HOD';
+    if (norm === 'DEO') return 'DEO';
+    if (norm === 'SECURITY') return 'Security Staff';
+    if (norm === 'STUDENT') return 'Student';
+    return r.charAt(0).toUpperCase() + r.slice(1).toLowerCase();
   };
 
   const allNavItems = [
-    { label: 'Dashboard', path: '/dashboard', icon: LayoutDashboard, roles: ['superadmin', 'admin', 'principal', 'hod'] },
-    { label: 'Students', path: '/students', icon: Users, roles: ['superadmin', 'admin', 'principal', 'hod', 'faculty', 'deo'] },
-    { label: 'Recognition', path: '/detect', icon: Scan, roles: ['superadmin', 'admin', 'security', 'securitystaff'] },
-    { label: 'Violations', path: '/violations', icon: AlertTriangle, roles: ['superadmin', 'admin', 'principal', 'hod', 'faculty', 'security', 'securitystaff', 'deo'] },
-    { label: 'Reports', path: '/reports', icon: FileBarChart2, roles: ['superadmin', 'admin', 'principal', 'hod'] },
-    { label: 'User Admin', path: '/users', icon: UserCheck, roles: ['superadmin', 'admin'] },
-    { label: 'Settings', path: '/settings', icon: Settings, roles: ['superadmin', 'admin', 'principal'] },
+    { label: 'Dashboard', path: '/dashboard', icon: LayoutDashboard, permission: 'dashboard.view' },
+    { label: 'Students', path: '/students', icon: Users, permission: 'students.view' },
+    { label: 'Recognition', path: '/detect', icon: Scan, permission: 'recognition.view' },
+    { label: 'Violations', path: '/violations', icon: AlertTriangle, permission: 'violations.view' },
+    { label: 'Reports', path: '/reports', icon: FileBarChart2, permission: 'reports.view' },
+    { label: 'User Admin', path: '/users', icon: UserCheck, permission: 'users.manage' },
+    { label: 'Settings', path: '/settings', icon: Settings, permission: 'settings.manage' },
+    { label: 'Student Portal', path: '/student-portal', icon: GraduationCap, permission: 'student.self' },
   ];
 
-  const navItems = allNavItems.filter((item) => item.roles.includes(rawRole));
+  const navItems = allNavItems.filter((item) => hasPermission(item.permission));
 
   return (
     <motion.aside
@@ -127,7 +130,7 @@ export const Sidebar: React.FC<SidebarProps> = () => {
             >
               <div className="flex flex-col overflow-hidden">
                 <span className="text-xs font-bold text-slate-700 dark:text-slate-200 truncate">
-                  {user?.display_name || user?.username || 'Admin'}
+                  {user?.display_name || user?.username || 'User'}
                 </span>
                 <span className="text-[10px] text-[#007AFF] dark:text-[#0A84FF] font-bold uppercase tracking-wider">
                   {formatRoleDisplay(user?.role)}

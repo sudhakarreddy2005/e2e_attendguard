@@ -44,10 +44,12 @@ class Settings(BaseSettings):
     BCRYPT_ROUNDS: int = 12
     RATE_LIMIT_PER_MINUTE: int = 60
     
-    # ── Google OAuth & Institutional Identity ───────────────────────────
+    # ── Microsoft Entra ID (Azure AD) & Identity ─────────────────────────
+    AZURE_CLIENT_ID: Optional[str] = "8b51b70f-d5de-4b5f-b347-a8b477ea361e"
+    AZURE_TENANT_ID: Optional[str] = "f6981b0a-3915-4628-be7e-368196415f8f"
     GOOGLE_CLIENT_ID: Optional[str] = "109876543210-attendguard-vvit.apps.googleusercontent.com"
     GOOGLE_CLIENT_SECRET: Optional[str] = None
-    ALLOWED_DOMAINS: list[str] = ["vvit.net", "gmail.com"]
+    ALLOWED_DOMAINS: list[str] = ["vvit.net"]
     SUPER_ADMIN_EMAIL: str = "23BQ1A05A9@vvit.net"
 
     # ── Face Recognition ─────────────────────────────────────────────────

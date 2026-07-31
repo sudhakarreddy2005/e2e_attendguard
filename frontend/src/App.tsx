@@ -18,6 +18,11 @@ import { ViolationsPage } from './pages/ViolationsPage';
 import { ReportsPage } from './pages/ReportsPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { UserManagementPage } from './pages/UserManagementPage';
+import { StudentPortalPage } from './pages/StudentPortalPage';
+import { ProtectedPermissionRoute } from './components/auth/ProtectedPermissionRoute';
+
+import { MsalProvider } from '@azure/msal-react';
+import { msalInstance } from './services/msalConfig';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -27,6 +32,18 @@ const queryClient = new QueryClient({
     },
   },
 });
+
+const DefaultRedirect: React.FC = () => {
+  const { user, hasPermission } = useAuth();
+  if (hasPermission('student.self') && (user?.role || '').toUpperCase() === 'STUDENT') {
+    return <Navigate to="/student-portal" replace />;
+  }
+  if (hasPermission('dashboard.view')) return <Navigate to="/dashboard" replace />;
+  if (hasPermission('students.view')) return <Navigate to="/students" replace />;
+  if (hasPermission('recognition.view')) return <Navigate to="/detect" replace />;
+  if (hasPermission('violations.view')) return <Navigate to="/violations" replace />;
+  return <Navigate to="/student-portal" replace />;
+};
 
 const ProtectedLayout: React.FC = () => {
   const { isAuthenticated } = useAuth();
@@ -49,14 +66,71 @@ const ProtectedLayout: React.FC = () => {
         <Header onOpenAI={() => setIsAIOpen(true)} />
         <main className="flex-1 max-w-7xl w-full mx-auto pb-10">
           <Routes>
-            <Route path="/dashboard" element={<DashboardPage />} />
-            <Route path="/students" element={<StudentsPage />} />
-            <Route path="/detect" element={<DetectPage />} />
-            <Route path="/violations" element={<ViolationsPage />} />
-            <Route path="/reports" element={<ReportsPage />} />
-            <Route path="/users" element={<UserManagementPage />} />
-            <Route path="/settings" element={<SettingsPage />} />
-            <Route path="*" element={<Navigate to="/dashboard" replace />} />
+            <Route
+              path="/dashboard"
+              element={
+                <ProtectedPermissionRoute permission="dashboard.view">
+                  <DashboardPage />
+                </ProtectedPermissionRoute>
+              }
+            />
+            <Route
+              path="/students"
+              element={
+                <ProtectedPermissionRoute permission="students.view">
+                  <StudentsPage />
+                </ProtectedPermissionRoute>
+              }
+            />
+            <Route
+              path="/detect"
+              element={
+                <ProtectedPermissionRoute permission="recognition.view">
+                  <DetectPage />
+                </ProtectedPermissionRoute>
+              }
+            />
+            <Route
+              path="/violations"
+              element={
+                <ProtectedPermissionRoute permission="violations.view">
+                  <ViolationsPage />
+                </ProtectedPermissionRoute>
+              }
+            />
+            <Route
+              path="/reports"
+              element={
+                <ProtectedPermissionRoute permission="reports.view">
+                  <ReportsPage />
+                </ProtectedPermissionRoute>
+              }
+            />
+            <Route
+              path="/users"
+              element={
+                <ProtectedPermissionRoute permission="users.manage">
+                  <UserManagementPage />
+                </ProtectedPermissionRoute>
+              }
+            />
+            <Route
+              path="/settings"
+              element={
+                <ProtectedPermissionRoute permission="settings.manage">
+                  <SettingsPage />
+                </ProtectedPermissionRoute>
+              }
+            />
+            <Route
+              path="/student-portal"
+              element={
+                <ProtectedPermissionRoute permission="student.self">
+                  <StudentPortalPage />
+                </ProtectedPermissionRoute>
+              }
+            />
+            <Route path="*" element={<DefaultRedirect />} />
           </Routes>
         </main>
       </div>
@@ -71,8 +145,10 @@ export function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>
-        <AuthProvider>
-          <SearchProvider>
+        <MsalProvider instance={msalInstance}>
+          <AuthProvider>
+            <SearchProvider>
+
             {/* Ambient background for login route as well */}
             <div className="apple-mesh-bg">
               <div className="apple-mesh-blob-3" />
@@ -84,8 +160,9 @@ export function App() {
             </Routes>
           </SearchProvider>
         </AuthProvider>
-      </ThemeProvider>
-    </QueryClientProvider>
+      </MsalProvider>
+    </ThemeProvider>
+  </QueryClientProvider>
   );
 }
 

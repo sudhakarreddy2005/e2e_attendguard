@@ -185,17 +185,16 @@ export const UserManagementPage: React.FC = () => {
                       </td>
                       <td className="p-4">
                         <select
-                          value={u.role || 'faculty'}
+                          value={(u.role || 'STUDENT').toUpperCase()}
                           onChange={(e) => handleRoleChange(userEmail, e.target.value)}
                           className="px-3 py-1.5 rounded-xl bg-black/5 dark:bg-white/10 border border-black/10 dark:border-white/10 text-slate-700 dark:text-slate-200 font-semibold text-xs capitalize"
                         >
-                          <option value="super_admin">Super Admin</option>
-                          <option value="principal">Principal</option>
-                          <option value="hod">HOD</option>
-                          <option value="faculty">Faculty</option>
-                          <option value="security">Security Staff</option>
-                          <option value="deo">DEO</option>
-                          <option value="student">Student</option>
+                          <option value="SUPER_ADMIN">Super Admin</option>
+                          <option value="PRINCIPAL">Principal</option>
+                          <option value="HOD">HOD</option>
+                          <option value="DEO">DEO</option>
+                          <option value="SECURITY">Security Staff</option>
+                          <option value="STUDENT">Student</option>
                         </select>
                       </td>
                       <td className="p-4 text-slate-500 dark:text-slate-400">
@@ -203,8 +202,18 @@ export const UserManagementPage: React.FC = () => {
                         <p className="text-[11px]">{u.designation || 'Staff'}</p>
                       </td>
                       <td className="p-4">
-                        <span className="px-2.5 py-1 rounded-full text-[10px] font-semibold bg-[#30D158]/15 text-[#30D158] border border-[#30D158]/30 capitalize">
-                          {u.auth_provider || 'Google OAuth'}
+                        <span className={`px-2.5 py-1 rounded-full text-[10px] font-semibold border capitalize ${
+                          (u.auth_provider || '').includes('microsoft') || (u.auth_provider || '').includes('entra')
+                            ? 'bg-[#0078D4]/15 text-[#0078D4] dark:text-[#2896F3] border-[#0078D4]/30'
+                            : (u.auth_provider || '').includes('local')
+                            ? 'bg-[#FF9500]/15 text-[#FF9500] border-[#FF9500]/30'
+                            : 'bg-[#30D158]/15 text-[#30D158] border-[#30D158]/30'
+                        }`}>
+                          {(u.auth_provider || '').includes('microsoft') || (u.auth_provider || '').includes('entra')
+                            ? 'Microsoft Entra ID'
+                            : (u.auth_provider || '').includes('local')
+                            ? 'Local Admin'
+                            : 'Google OAuth'}
                         </span>
                       </td>
                       <td className="p-4">
@@ -275,13 +284,12 @@ export const UserManagementPage: React.FC = () => {
                 onChange={(e) => setInviteRole(e.target.value)}
                 className="w-full px-3.5 py-2.5 rounded-2xl bg-black/5 dark:bg-white/10 border border-white/20 dark:border-white/10 text-slate-700 dark:text-white font-semibold"
               >
-                <option value="super_admin">Super Admin</option>
-                <option value="principal">Principal</option>
-                <option value="hod">HOD</option>
-                <option value="faculty">Faculty</option>
-                <option value="security">Security</option>
-                <option value="deo">DEO</option>
-                <option value="student">Student</option>
+                <option value="SUPER_ADMIN">Super Admin</option>
+                <option value="PRINCIPAL">Principal</option>
+                <option value="HOD">HOD</option>
+                <option value="DEO">DEO</option>
+                <option value="SECURITY">Security Staff</option>
+                <option value="STUDENT">Student</option>
               </select>
             </div>
             <div>

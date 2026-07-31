@@ -82,6 +82,7 @@ def create_app() -> FastAPI:
     from app.api.extra_routes import search_router, settings_router, notifications_router
     from app.api.ai import router as ai_router
     from app.api.users import router as users_router
+    from app.api.student_portal import router as student_portal_router
 
     app.include_router(auth_router)
     app.include_router(users_router)
@@ -94,6 +95,7 @@ def create_app() -> FastAPI:
     app.include_router(settings_router)
     app.include_router(notifications_router)
     app.include_router(ai_router)
+    app.include_router(student_portal_router, prefix="/api")
 
     # ── Health Check ──────────────────────────────────────────────────
     @app.get("/ping")

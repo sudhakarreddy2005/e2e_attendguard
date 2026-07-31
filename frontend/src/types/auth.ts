@@ -1,12 +1,11 @@
 export type UserRole =
-  | 'super_admin'
-  | 'principal'
-  | 'hod'
-  | 'faculty'
-  | 'security'
-  | 'deo'
-  | 'student'
-  | 'admin';
+  | 'SUPER_ADMIN'
+  | 'PRINCIPAL'
+  | 'HOD'
+  | 'DEO'
+  | 'SECURITY'
+  | 'STUDENT'
+  | string;
 
 export interface User {
   username: string;
@@ -16,6 +15,8 @@ export interface User {
   department?: string;
   profile_photo?: string;
   designation?: string;
+  permissions?: string[];
+  auth_provider?: string;
 }
 
 export interface AuthState {

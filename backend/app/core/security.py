@@ -1,12 +1,12 @@
 """
-JWT token management and password hashing.
+JWT token management, password hashing, and permission verification.
 
-Supports 4 roles: super_admin, principal, faculty, admin.
-Role hierarchy: super_admin > principal > admin > faculty.
+Supported 6 Roles: SUPER_ADMIN, PRINCIPAL, HOD, DEO, SECURITY, STUDENT.
+Authorization is driven by granular DB permissions embedded in JWTs.
 """
 
 from datetime import datetime, timedelta, timezone
-from typing import Any, Optional
+from typing import Any, Optional, List
 
 import bcrypt
 from jose import JWTError, jwt
@@ -14,29 +14,30 @@ from pydantic import BaseModel
 
 from app.core.config import settings
 
-
-# ── Institutional Role Hierarchy ──────────────────────────────────────────
-ROLE_HIERARCHY = {
-    "super_admin": 7,
-    "principal": 6,
-    "hod": 5,
-    "admin": 4,
-    "faculty": 3,
-    "security": 2,
-    "deo": 2,
-    "student": 1,
+# ── 6 Production IAM Roles ────────────────────────────────────────────────
+PRODUCTION_ROLES = {
+    "SUPER_ADMIN",
+    "PRINCIPAL",
+    "HOD",
+    "DEO",
+    "SECURITY",
+    "STUDENT",
 }
 
-VALID_ROLES = set(ROLE_HIERARCHY.keys())
+VALID_ROLES = PRODUCTION_ROLES
 
 
 class TokenPayload(BaseModel):
     """Decoded JWT token payload."""
-    sub: str  # username
+    sub: str  # user email
     role: str
     exp: datetime
     iat: datetime
     token_type: str = "access"
+    email: Optional[str] = None
+    name: Optional[str] = None
+    department: Optional[str] = None
+    permissions: List[str] = []
 
 
 # ── Password Hashing ─────────────────────────────────────────────────────
@@ -60,17 +61,25 @@ def create_access_token(
     subject: str,
     role: str,
     expires_delta: Optional[timedelta] = None,
+    email: Optional[str] = None,
+    name: Optional[str] = None,
+    department: Optional[str] = None,
+    permissions: Optional[List[str]] = None,
 ) -> str:
-    """Create a JWT access token."""
+    """Create a JWT access token with embedded permissions."""
     now = datetime.now(timezone.utc)
     expire = now + (expires_delta or timedelta(minutes=settings.JWT_ACCESS_TOKEN_EXPIRE_MINUTES))
 
     payload = {
         "sub": subject,
-        "role": role,
+        "role": role.upper(),
         "exp": expire,
         "iat": now,
         "token_type": "access",
+        "email": email or subject,
+        "name": name or subject.split("@")[0],
+        "department": department or "General",
+        "permissions": permissions or [],
     }
     return jwt.encode(payload, settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
 
@@ -86,7 +95,7 @@ def create_refresh_token(
 
     payload = {
         "sub": subject,
-        "role": role,
+        "role": role.upper(),
         "exp": expire,
         "iat": now,
         "token_type": "refresh",
@@ -107,10 +116,13 @@ def decode_token(token: str) -> Optional[TokenPayload]:
         return None
 
 
-# ── Role Checks ───────────────────────────────────────────────────────────
+# ── Permission Verification ──────────────────────────────────────────────
 
-def has_minimum_role(user_role: str, required_role: str) -> bool:
-    """Check if user_role meets or exceeds the required_role in hierarchy."""
-    user_level = ROLE_HIERARCHY.get(user_role, 0)
-    required_level = ROLE_HIERARCHY.get(required_role, 0)
-    return user_level >= required_level
+def user_has_permission(user_permissions: List[str], required_permission: str) -> bool:
+    """
+    Check if required_permission exists in user_permissions.
+    Supports wildcard '*' for unrestricted Super Admin permissions.
+    """
+    if "*" in user_permissions:
+        return True
+    return required_permission in user_permissions

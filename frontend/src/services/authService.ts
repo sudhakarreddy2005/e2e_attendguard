@@ -1,10 +1,16 @@
 import { apiClient } from './api';
 
 export const authService = {
+  microsoftLogin: async (idToken: string): Promise<any> => {
+    const res = await apiClient.post('/api/auth/microsoft', { id_token: idToken });
+    return res.data;
+  },
+
   googleLogin: async (idToken: string): Promise<any> => {
     const res = await apiClient.post('/api/auth/google', { id_token: idToken });
     return res.data;
   },
+
 
   login: async (username: string, password: string): Promise<any> => {
     const res = await apiClient.post('/api/auth/login', { username, password });

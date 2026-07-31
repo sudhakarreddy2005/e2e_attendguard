@@ -5,9 +5,9 @@ import uuid
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, Response
 
-from app.api.deps import require_auth, require_role
+from app.api.deps import require_permission, require_auth
 from app.core.config import settings
 from app.core.exceptions import NoFaceDetectedError, StudentNotFoundError, ValidationError
 from app.core.security import TokenPayload
@@ -27,7 +27,7 @@ async def register_student(
     email: str = Form(""),
     threshold: str = Form("75"),
     image: UploadFile = File(...),
-    user: TokenPayload = Depends(require_role("faculty")),
+    user: TokenPayload = Depends(require_permission("students.create")),
 ):
     """Register a new student with a face image."""
     roll_no_clean = roll_no.strip().upper()
@@ -46,8 +46,6 @@ async def register_student(
         f.write(content)
 
     try:
-        # The vision pipeline will handle face detection + embedding in Phase 2
-        # For now, store as pending_image (will use legacy pipeline as fallback)
         student_data = {
             "name": name,
             "roll_no": roll_no_clean,
@@ -72,7 +70,6 @@ async def register_student(
         }
 
     except Exception as e:
-        # Cleanup on failure
         if image_path.exists():
             shutil.rmtree(storage_dir, ignore_errors=True)
         raise
@@ -82,9 +79,16 @@ async def register_student(
 async def get_students(
     skip: int = 0,
     limit: int = 100,
-    user: TokenPayload = Depends(require_auth),
+    user: TokenPayload = Depends(require_permission("students.view")),
 ):
+    """Get student list with automatic HOD department filtering."""
     students = await StudentService.get_students(skip=skip, limit=limit)
+    if user.role.upper() == "HOD" and user.department:
+        target_dept = user.department.upper().strip()
+        students = [
+            s for s in students
+            if s.get("department", "").upper().strip() == target_dept
+        ]
     return students
 
 
@@ -116,7 +120,7 @@ async def get_student_image(roll_no: str):
 @router.get("/{roll_no}/analytics")
 async def get_student_analytics(
     roll_no: str,
-    user: TokenPayload = Depends(require_auth),
+    user: TokenPayload = Depends(require_permission("students.view")),
 ):
     analytics = await StudentService.get_student_analytics(roll_no.upper())
     if not analytics:
@@ -128,12 +132,9 @@ async def get_student_analytics(
 async def update_student(
     roll_no: str,
     payload: dict,
-    user: TokenPayload = Depends(require_role(["super_admin", "admin", "deo"])),
+    user: TokenPayload = Depends(require_permission("students.edit")),
 ):
-    """
-    Update student profile details (name, year, department, section, contact_info).
-    Restricted strictly to DEO, Super Admin, and Admin roles.
-    """
+    """Update student profile details."""
     try:
         updated_student = await StudentService.update_student(
             roll_no.upper(), payload, updated_by=user.sub
@@ -145,14 +146,9 @@ async def update_student(
         return {"success": False, "error": str(e)}
 
 
-from fastapi.responses import FileResponse, Response
-
-
 @router.get("/import-template")
 async def download_import_template():
-    """
-    Download a sample CSV template for bulk student import.
-    """
+    """Download a sample CSV template for bulk student import."""
     template_content = "Roll_No,Name,Department,Section,Year,Phone,Email\n23BQ1A0501,A.Vidhaya,CSE,A,3rd Year,9515756677,23bq1a0501@vvit.net\n23BQ1A0502,B.Pranay,CSE,A,3rd Year,9876543210,23bq1a0502@vvit.net\n"
     return Response(
         content=template_content,
@@ -164,12 +160,9 @@ async def download_import_template():
 @router.post("/import")
 async def import_students(
     file: UploadFile = File(...),
-    user: TokenPayload = Depends(require_role(["super_admin", "admin", "deo"])),
+    user: TokenPayload = Depends(require_permission("students.create")),
 ):
-    """
-    Bulk import students from CSV or Excel (.xlsx / .xls) file.
-    Restricted strictly to DEO, Admin, and Super Admin roles.
-    """
+    """Bulk import students from CSV or Excel file."""
     if not file.filename.lower().endswith((".csv", ".xlsx", ".xls")):
         raise HTTPException(
             status_code=400,
@@ -196,15 +189,11 @@ async def import_students(
 @router.delete("/{roll_no}")
 async def delete_student(
     roll_no: str,
-    user: TokenPayload = Depends(require_role(["super_admin", "admin", "principal", "deo", "hod"])),
+    user: TokenPayload = Depends(require_permission("students.delete")),
 ):
-    """
-    Delete a student profile with full database & storage cascading integrity.
-    Restricted strictly to Admin, Principal, DEO, and HOD roles.
-    """
+    """Delete a student profile."""
     try:
         await StudentService.delete_student(roll_no, deleted_by=user.sub)
         return {"success": True, "message": f"Student {roll_no} deleted successfully"}
     except StudentNotFoundError:
         return {"success": False, "error": "Student not found"}
-
