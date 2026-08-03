@@ -16,6 +16,8 @@ class AttendanceTool(BaseAITool):
         student_id: Optional[str] = None,
         department: Optional[str] = None,
         min_bunk_count: Optional[int] = None,
+        sort_direction: Optional[str] = "desc",
+        limit: Optional[int] = 10,
         **kwargs,
     ) -> Dict[str, Any]:
         """Execute attendance analysis tool."""
@@ -44,7 +46,9 @@ class AttendanceTool(BaseAITool):
         if min_bunk_count is not None:
             query["bunk_count"] = {"$gte": min_bunk_count}
 
-        students = await student_repo.find_many(query, limit=50)
+        sort_order = 1 if sort_direction == "asc" else -1
+        max_limit = limit or 10
+        students = await student_repo.find_many(query, sort=[("bunk_count", sort_order)], limit=max_limit)
         total_count = await student_repo.count(query)
 
         high_risk = [s for s in students if s.get("bunk_count", 0) >= 3]
@@ -54,6 +58,8 @@ class AttendanceTool(BaseAITool):
             "type": "summary_list",
             "total_records": total_count,
             "filter_department": department,
+            "sort_direction": sort_direction,
+            "limit": max_limit,
             "high_risk_count": len(high_risk),
             "students": [
                 {
@@ -62,6 +68,7 @@ class AttendanceTool(BaseAITool):
                     "dept": s.get("dept"),
                     "bunk_count": s.get("bunk_count", 0),
                 }
-                for s in students[:20]
+                for s in students
             ],
         }
+

@@ -15,19 +15,20 @@ from app.ai.tools.notification_tool import NotificationTool
 from app.ai.tools.policy_rag_tool import PolicyRAGTool
 from app.ai.tools.vision_tool import VisionTool
 from app.ai.tools.recommendation_tool import RecommendationTool
+from app.ai.tools.disciplinary_tool import DisciplinaryTool
 from app.core.logging import get_logger, LOGGER_AI
 
 logger = get_logger(LOGGER_AI)
 
 
 class ToolRegistry:
-    """Registry managing all 11 enterprise AI tools."""
+    """Registry managing enterprise AI tools."""
 
     _tools: Dict[str, BaseAITool] = {}
 
     @classmethod
     def register_default_tools(cls):
-        """Register full suite of 11 enterprise tools."""
+        """Register full suite of enterprise tools."""
         cls._tools.clear()
         defaults = [
             AttendanceTool(),
@@ -41,6 +42,7 @@ class ToolRegistry:
             PolicyRAGTool(),
             VisionTool(),
             RecommendationTool(),
+            DisciplinaryTool(),
         ]
         for t in defaults:
             cls._tools[t.name] = t

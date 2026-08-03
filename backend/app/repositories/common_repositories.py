@@ -88,10 +88,41 @@ class SettingsRepository(BaseRepository):
             })
 
 
+class NotificationAuditRepository(BaseRepository):
+    collection_name = getattr(C, "NOTIFICATION_AUDIT", "notification_audit")
+
+    async def log_attempt(
+        self,
+        student_id: str,
+        recipient: str,
+        mode: str,
+        status: str,
+        provider_response: Optional[dict] = None,
+        error_message: Optional[str] = None,
+        correlation_id: Optional[str] = None,
+        retry_count: int = 0,
+        timestamp: Optional[float] = None,
+    ) -> str:
+        doc = {
+            "timestamp": timestamp or __import__("time").time(),
+            "student_id": student_id,
+            "recipient": recipient,
+            "mode": mode,
+            "status": status,
+            "provider_response": provider_response or {},
+            "error_message": error_message,
+            "correlation_id": correlation_id or f"corr_{__import__('uuid').uuid4().hex[:8]}",
+            "retry_count": retry_count,
+        }
+        return await self.insert_one(doc)
+
+
 # Singleton instances
 audit_repo = AuditLogRepository()
 admin_repo = AdminRepository()
 report_repo = ReportRepository()
 attendance_repo = AttendanceRepository()
 notification_repo = NotificationRepository()
+notification_audit_repo = NotificationAuditRepository()
 settings_repo = SettingsRepository()
+

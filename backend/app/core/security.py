@@ -14,17 +14,20 @@ from pydantic import BaseModel
 
 from app.core.config import settings
 
-# ── 6 Production IAM Roles ────────────────────────────────────────────────
+# ── 8 Enterprise IAM Roles ────────────────────────────────────────────────
 PRODUCTION_ROLES = {
     "SUPER_ADMIN",
     "PRINCIPAL",
+    "ADMIN",
     "HOD",
+    "FACULTY",
     "DEO",
     "SECURITY",
     "STUDENT",
 }
 
 VALID_ROLES = PRODUCTION_ROLES
+
 
 
 class TokenPayload(BaseModel):

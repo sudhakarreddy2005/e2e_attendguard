@@ -106,6 +106,22 @@ async def create_indexes() -> None:
         IndexModel([("expires_at", ASCENDING)]),
     ])
 
+    # ── Notification History ──────────────────────────────────────────
+    await db[C.NOTIFICATION_HISTORY].create_indexes([
+        IndexModel(
+            [
+                ("roll_number", ASCENDING),
+                ("academic_year", ASCENDING),
+                ("semester", ASCENDING),
+                ("notification_level", ASCENDING),
+            ],
+            unique=True,
+        ),
+        IndexModel([("sent_at", DESCENDING)]),
+        IndexModel([("roll_number", ASCENDING)]),
+        IndexModel([("academic_year", ASCENDING), ("semester", ASCENDING)]),
+    ])
+
     # ── Settings ──────────────────────────────────────────────────────
     await db[C.SETTINGS].create_indexes([
         IndexModel([("key", ASCENDING)], unique=True),

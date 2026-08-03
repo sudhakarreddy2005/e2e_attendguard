@@ -25,8 +25,27 @@ async def global_search(
 settings_router = APIRouter(prefix="/api/settings", tags=["Settings"])
 
 
+@settings_router.get("/discipline")
+async def get_discipline_settings(user: TokenPayload = Depends(require_auth)):
+    """Fetch current institutional disciplinary escalation settings."""
+    from app.services.discipline_config_service import discipline_config_service
+    cfg = await discipline_config_service.get_config()
+    return {"success": True, "data": cfg}
+
+
+@settings_router.put("/discipline")
+async def update_discipline_settings(
+    data: dict,
+    user: TokenPayload = Depends(require_auth),
+):
+    """Update institutional disciplinary escalation settings."""
+    from app.services.discipline_config_service import discipline_config_service
+    updated = await discipline_config_service.update_config(data)
+    return {"success": True, "data": updated, "message": "Disciplinary policy settings updated successfully"}
+
+
 @settings_router.get("/")
-async def get_settings(user: TokenPayload = Depends(require_role("admin"))):
+async def get_settings(user: TokenPayload = Depends(require_auth)):
     all_settings = await settings_repo.find_many()
     return {"success": True, "data": all_settings}
 
@@ -51,6 +70,19 @@ async def get_notifications(user: TokenPayload = Depends(require_auth)):
     return {"success": True, "data": notifications}
 
 
+@notifications_router.get("/history")
+async def get_notification_history(
+    limit: int = 50,
+    user: TokenPayload = Depends(require_auth),
+):
+    """Fetch institutional notification history audit logs."""
+    from app.repositories.notification_history_repository import notification_history_repo
+    history = await notification_history_repo.find_many(sort=[("sent_at", -1)], limit=limit)
+    for item in history:
+        item["_id"] = str(item["_id"])
+    return {"success": True, "data": history}
+
+
 @notifications_router.post("/{notification_id}/read")
 async def mark_notification_read(
     notification_id: str,
@@ -58,3 +90,4 @@ async def mark_notification_read(
 ):
     await notification_repo.mark_read(notification_id)
     return {"success": True}
+

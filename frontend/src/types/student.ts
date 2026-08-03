@@ -16,6 +16,9 @@ export interface Student {
   department: string;
   section: string;
   year?: string;
+  academic_year?: string;
+  current_semester?: string;
+  semester_violations?: Record<string, number>;
   contact_info?: ContactInfo;
   face?: FaceRegistration;
   violations_count: number;

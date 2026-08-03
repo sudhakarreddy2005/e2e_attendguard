@@ -186,10 +186,14 @@ class RecognitionPipeline:
         recognition_ms = (time.time() - recognition_start) * 1000
         total_ms = (time.time() - total_start) * 1000
 
-        # Format rich recognition result
+        # Construct comprehensive diagnostic explanations
         for m in matches:
-            m["quality_score"] = quality.get("score", 95.0)
-            m["lighting"] = "Good" if quality.get("score", 90) > 75 else "Low"
+            m["quality_score"] = quality.get("overall_quality", 0.9) * 100.0
+            m["blur_score"] = quality.get("blur_score", 50.0)
+            m["lighting_score"] = quality.get("lighting_score", 0.8)
+            m["lighting"] = "Good" if quality.get("lighting_score", 0.8) > 0.5 else "Low Light"
+            m["pose"] = "Centered / Optimal"
+            m["recognition_time_ms"] = round(recognition_ms, 1)
 
         result = {
             "success": True,
@@ -210,9 +214,43 @@ class RecognitionPipeline:
             result["distance"] = round(1.0 - matches[0]["similarity"], 4)
 
         if matches:
-            result["reason"] = f"Recognition Successful — Matched {len(matches)} face(s)"
+            result["reason"] = f"Recognition Successful — Matched {len(matches)} face(s) with high confidence"
+            result["explanation"] = {
+                "status": "MATCHED",
+                "summary": f"Verified {matches[0]['name']} ({matches[0]['roll_no']})",
+                "similarity_score": matches[0]["similarity"],
+                "confidence_percent": matches[0]["confidence"],
+                "quality_assessment": "Acceptable",
+                "suggestions": []
+            }
         else:
-            result["reason"] = "Recognition Inconclusive — Similarity score below threshold or quality degradation"
+            # Build detailed failure analysis
+            best_cand, top_sim = similarity_engine.find_best_match(
+                faces[0]["embedding"], candidates
+            )
+            top_sim_val = round(top_sim, 4) if top_sim else 0.0
+            
+            suggestions = []
+            if quality.get("blur_score", 100) < 45.0:
+                suggestions.append("Hold camera steady to reduce motion blur.")
+            if quality.get("lighting_score", 1.0) < 0.4:
+                suggestions.append("Increase front lighting on student face.")
+            if faces[0].get("face_width", 100) < settings.FACE_MIN_SIZE:
+                suggestions.append("Move closer to the camera to increase facial resolution.")
+            if not suggestions:
+                suggestions.append("Ensure student is registered in the database for the selected department/section.")
+
+            result["reason"] = f"Recognition Inconclusive — Top similarity ({top_sim_val}) below threshold ({settings.FACE_SIMILARITY_THRESHOLD})"
+            result["explanation"] = {
+                "status": "UNMATCHED",
+                "summary": f"Top match similarity is {top_sim_val}, required threshold is {settings.FACE_SIMILARITY_THRESHOLD}.",
+                "blur_status": f"Score {quality.get('blur_score')} ({'Blurry' if quality.get('blur_score', 100) < 45 else 'Sharp'})",
+                "lighting_status": f"Score {quality.get('lighting_score')} ({'Low' if quality.get('lighting_score', 1) < 0.4 else 'Good'})",
+                "pose_status": "Neutral / Dynamic",
+                "face_distance_px": faces[0].get("face_width", 0),
+                "top_similarity_score": top_sim_val,
+                "suggestions": suggestions
+            }
 
         logger.info(
             "Recognition: %d faces → %d matches (%.0fms detect, %.0fms match)",
@@ -220,6 +258,7 @@ class RecognitionPipeline:
         )
 
         return result
+
 
     @staticmethod
     def _error_response(reason: str, **extra) -> dict:

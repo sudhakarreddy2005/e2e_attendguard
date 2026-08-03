@@ -113,19 +113,37 @@ class StudentService:
         )
 
     @staticmethod
-    async def get_student_analytics(roll_no: str) -> Optional[dict]:
-        """Get violation analytics for a specific student."""
+    async def get_student_analytics(
+        roll_no: str, semester: Optional[str] = None
+    ) -> Optional[dict]:
+        """Get violation analytics for a specific student, optionally filtered by semester."""
         from app.repositories.violation_repository import violation_repo
 
-        student = await student_repo.find_by_roll_no(roll_no.upper())
+        roll_clean = roll_no.upper().strip()
+        student = await student_repo.find_by_roll_no(roll_clean)
         if not student:
             return None
 
-        total_violations = student.get("violations_count", 0)
+        # Filter query for violations
+        match_filter: dict = {"roll_no": roll_clean}
+        if semester:
+            active_sem = student.get("current_semester", "3-2")
+            if semester == active_sem:
+                match_filter["$or"] = [
+                    {"semester": semester},
+                    {"semester": None},
+                    {"semester": {"$exists": False}},
+                ]
+            else:
+                match_filter["semester"] = semester
+
+        # Violation records
+        violations = await violation_repo.find_many(match_filter)
+        total_violations = len(violations)
 
         # Monthly trend (trailing 12 months)
         monthly_pipeline = [
-            {"$match": {"roll_no": roll_no.upper()}},
+            {"$match": match_filter},
             {"$group": {"_id": {"$month": "$created_at"}, "count": {"$sum": 1}}},
         ]
         month_aggregates = await violation_repo.aggregate(monthly_pipeline)
@@ -148,7 +166,7 @@ class StudentService:
 
         # Violation breakdown by type
         breakdown_pipeline = [
-            {"$match": {"roll_no": roll_no.upper()}},
+            {"$match": match_filter},
             {"$group": {"_id": "$type", "count": {"$sum": 1}}},
             {"$sort": {"count": -1}},
         ]
@@ -156,11 +174,10 @@ class StudentService:
         breakdown = {doc["_id"]: doc["count"] for doc in breakdown_agg if doc["_id"]}
 
         # Timeline (sorted DESC)
-        violations = await violation_repo.find_by_roll_no(roll_no.upper())
         timeline = []
-        for v in violations:
+        for v in sorted(violations, key=lambda x: x.get("created_at", datetime.min) or datetime.min, reverse=True):
             dt = v.get("created_at")
-            formatted_date = dt.strftime("%b %d, %Y") if hasattr(dt, "strftime") else str(dt)
+            formatted_date = dt.strftime("%b %d, %Y %I:%M %p") if hasattr(dt, "strftime") else str(dt)
             timeline.append({
                 "id": str(v.get("_id", "")),
                 "type": v.get("type", "Unknown"),
@@ -168,6 +185,7 @@ class StudentService:
                 "remark": v.get("remarks", "No remarks provided."),
                 "location": v.get("location", "Unknown Location"),
                 "status": v.get("status", "Pending"),
+                "semester": v.get("semester", "3-2"),
             })
 
         return {

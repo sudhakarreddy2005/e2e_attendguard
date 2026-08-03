@@ -45,10 +45,37 @@ class ViolationService:
         # Remove any stale 'student_id' key from frontend payloads
         violation_data.pop("student_id", None)
 
+        # Attach active academic_year and semester tags if missing
+        from app.services.discipline_config_service import discipline_config_service
+        config = await discipline_config_service.get_config()
+
+        if "academic_year" not in violation_data:
+            violation_data["academic_year"] = config.get("current_academic_year", "2025-2026")
+        if "semester" not in violation_data:
+            violation_data["semester"] = config.get("current_semester", "3-1")
+
         violation_id = await violation_repo.insert_one(violation_data)
 
-        # Atomically increment student violation counters
-        await student_repo.increment_violation(roll_no, v_type)
+        # Atomically increment student violation counters for total & specific semester
+        await student_repo.increment_violation(roll_no, v_type, semester=violation_data["semester"])
+
+        # Trigger semester disciplinary escalation pipeline via NotificationService
+        try:
+            from app.services.notification_service import notification_service
+            notif_res = await notification_service.process_disciplinary_escalation(
+                roll_no=roll_no,
+                violation_type=v_type,
+                location=location,
+                created_by=created_by,
+                academic_year_override=violation_data["academic_year"],
+                semester_override=violation_data["semester"],
+            )
+            logger.info("[Violation Pipeline] Disciplinary escalation trigger for %s: %s", roll_no, notif_res.get("reason") or f"Level {notif_res.get('level')}")
+        except Exception as e:
+            logger.error("[Violation Pipeline Error] Escalation trigger failed for %s: %s", roll_no, e)
+
+
+
 
         await audit_repo.log_action(
             user=created_by,
@@ -60,6 +87,7 @@ class ViolationService:
 
         logger.info("Created violation: %s for %s at %s", v_type, roll_no, location)
         return violation_id
+
 
     @staticmethod
     async def delete_violation(violation_id: str, deleted_by: str = "system") -> bool:

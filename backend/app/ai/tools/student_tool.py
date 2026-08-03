@@ -18,6 +18,8 @@ class StudentTool(BaseAITool):
         name: Optional[str] = None,
         department: Optional[str] = None,
         section: Optional[str] = None,
+        sort_direction: Optional[str] = "desc",
+        limit: Optional[int] = 10,
         **kwargs,
     ) -> Dict[str, Any]:
         """Fetch student details returning structured JSON ONLY."""
@@ -31,7 +33,9 @@ class StudentTool(BaseAITool):
         if section:
             query["section"] = section.upper()
 
-        students = await student_repo.find_many(query, limit=10)
+        sort_order = 1 if sort_direction == "asc" else -1
+        max_limit = limit or 10
+        students = await student_repo.find_many(query, sort=[("bunk_count", sort_order)], limit=max_limit)
         
         result_students = []
         for s in students:
@@ -55,5 +59,9 @@ class StudentTool(BaseAITool):
         return {
             "success": True,
             "count": len(result_students),
+            "sort_direction": sort_direction,
+            "filter_department": department,
+            "limit": max_limit,
             "students": result_students,
         }
+

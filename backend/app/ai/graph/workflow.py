@@ -30,7 +30,9 @@ class AgentWorkflowRunner:
         query: str,
         session_id: str = "default_session",
         messages: Optional[list] = None,
+        summary: Optional[str] = None,
     ) -> Dict[str, Any]:
+
         """Execute full 10-stage pipeline sequence."""
         state: AgentState = {
             "query": query,

@@ -97,18 +97,66 @@ def create_app() -> FastAPI:
     app.include_router(ai_router)
     app.include_router(student_portal_router, prefix="/api")
 
-    # ── Health Check ──────────────────────────────────────────────────
+    # ── Health & Readiness Probes ─────────────────────────────────────
     @app.get("/ping")
     async def ping():
         return {"status": "ok", "version": settings.APP_VERSION}
 
     @app.get("/health")
-    async def health():
+    @app.get("/health/live")
+    async def health_liveness():
         return {
-            "status": "ok",
+            "status": "alive",
             "version": settings.APP_VERSION,
             "environment": settings.ENVIRONMENT,
-            "database": settings.MONGO_DB,
+        }
+
+    @app.get("/health/ready")
+    async def health_readiness():
+        from app.database.connection import get_database
+        try:
+            db = get_database()
+            await db.command("ping")
+            mongo_ok = True
+        except Exception:
+            mongo_ok = False
+
+        if not mongo_ok:
+            return {"status": "unhealthy", "reason": "MongoDB connection failed"}, 503
+
+        return {
+            "status": "ready",
+            "version": settings.APP_VERSION,
+            "components": {
+                "mongodb": "healthy"
+            }
+        }
+
+    @app.get("/health/deps")
+    async def health_dependencies():
+        import os
+        from app.database.connection import get_database
+        
+        # Check MongoDB
+        try:
+            db = get_database()
+            await db.command("ping")
+            mongo_status = "connected"
+        except Exception as e:
+            mongo_status = f"error: {str(e)}"
+
+        # Check storage directories
+        storage_status = "ok" if os.path.exists(settings.STORAGE_DIR) else "missing"
+
+        return {
+            "version": settings.APP_VERSION,
+            "environment": settings.ENVIRONMENT,
+            "dependencies": {
+                "mongodb": mongo_status,
+                "storage_directory": storage_status,
+                "vector_store": "faiss",
+                "copilot_engine": "langgraph",
+            }
         }
 
     return app
@@ -116,3 +164,4 @@ def create_app() -> FastAPI:
 
 # Application instance — used by uvicorn
 app = create_app()
+

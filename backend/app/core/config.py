@@ -8,8 +8,9 @@ All settings are centralized here — no scattered os.getenv() calls.
 from pathlib import Path
 from typing import Optional
 
-from pydantic import Field
+from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings
+
 
 
 class Settings(BaseSettings):
@@ -86,12 +87,42 @@ class Settings(BaseSettings):
     ENABLE_AUDIT_LOG: bool = True
     ENABLE_NOTIFICATIONS: bool = True
 
+    # ── Microsoft Graph API Notifications & Safety Guardrails ─────────────
+    TENANT_ID: Optional[str] = "f6981b0a-3915-4628-be7e-368196415f8f"
+    CLIENT_ID: Optional[str] = "8b51b70f-d5de-4b5f-b347-a8b477ea361e"
+    CLIENT_SECRET: Optional[str] = None
+    SENDER_UPN: str = "23bq1a05a9@vvit.net"
+    NOTIFICATION_MODE: str = Field(default="dry_run", description="dry_run (DEFAULT) | shadow | live")
+
+
+    NOTIFICATIONS_ENABLED: bool = True
+    MAX_NOTIFICATIONS_PER_HOUR: int = 50
+    NOTIFY_THRESHOLD: int = 3
+    SHADOW_TEST_EMAIL: str = "security-audit@vvit.net"
+
+
+    @model_validator(mode="before")
+    @classmethod
+    def populate_azure_fallbacks(cls, data: any) -> any:
+        if isinstance(data, dict):
+            # Fallback for tenant ID
+            if not data.get("TENANT_ID") and data.get("AZURE_TENANT_ID"):
+                data["TENANT_ID"] = data.get("AZURE_TENANT_ID")
+            # Fallback for client ID
+            if not data.get("CLIENT_ID") and data.get("AZURE_CLIENT_ID"):
+                data["CLIENT_ID"] = data.get("AZURE_CLIENT_ID")
+            # Fallback for client secret
+            if not data.get("CLIENT_SECRET") and data.get("AZURE_CLIENT_SECRET"):
+                data["CLIENT_SECRET"] = data.get("AZURE_CLIENT_SECRET")
+        return data
+
     model_config = {
         "env_file": ".env",
         "env_file_encoding": "utf-8",
         "case_sensitive": True,
         "extra": "ignore",
     }
+
 
     def ensure_storage_dirs(self) -> None:
         """Create all storage directories if they don't exist."""

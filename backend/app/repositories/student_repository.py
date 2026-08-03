@@ -44,9 +44,15 @@ class StudentRepository(BaseRepository):
             query["section"] = section.upper()
         return await self.find_many(query)
 
-    async def increment_violation(self, roll_no: str, violation_type: str) -> bool:
-        """Atomically increment violation counters."""
+    async def increment_violation(
+        self, roll_no: str, violation_type: str, semester: Optional[str] = None
+    ) -> bool:
+        """Atomically increment violation counters including semester-specific counters."""
+        clean_roll = roll_no.strip().upper()
         inc_data: dict = {"violations_count": 1}
+
+        if semester:
+            inc_data[f"semester_violations.{semester}"] = 1
 
         v_lower = violation_type.lower()
         if "late" in v_lower:
@@ -57,13 +63,19 @@ class StudentRepository(BaseRepository):
             inc_data["dress_code_count"] = 1
 
         return await self.update_one(
-            {"roll_no": roll_no},
+            {"$or": [{"roll_no": clean_roll}, {"roll_no": roll_no}]},
             {"$inc": inc_data},
         )
 
-    async def decrement_violation(self, roll_no: str, violation_type: str) -> bool:
+    async def decrement_violation(
+        self, roll_no: str, violation_type: str, semester: Optional[str] = None
+    ) -> bool:
         """Atomically decrement violation counters (on violation delete)."""
+        clean_roll = roll_no.strip().upper()
         inc_data: dict = {"violations_count": -1}
+
+        if semester:
+            inc_data[f"semester_violations.{semester}"] = -1
 
         v_lower = violation_type.lower()
         if "late" in v_lower:
@@ -74,7 +86,7 @@ class StudentRepository(BaseRepository):
             inc_data["dress_code_count"] = -1
 
         return await self.update_one(
-            {"roll_no": roll_no},
+            {"$or": [{"roll_no": clean_roll}, {"roll_no": roll_no}]},
             {"$inc": inc_data},
         )
 

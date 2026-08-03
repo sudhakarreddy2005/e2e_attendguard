@@ -31,6 +31,8 @@ class StudentDocument(DocumentBase):
     department: str = "CSE"
     section: str = "A"
     year: str = ""
+    academic_year: str = "2025-2026"
+    current_semester: str = "3-2"
     semester: Optional[int] = None
 
     contact_info: ContactInfo = Field(default_factory=ContactInfo)
@@ -41,6 +43,7 @@ class StudentDocument(DocumentBase):
     late_count: int = 0
     bunk_count: int = 0
     dress_code_count: int = 0
+    semester_violations: dict[str, int] = Field(default_factory=dict)
     attendance_percentage: float = 0.0
 
     # Flexible metadata for future fields

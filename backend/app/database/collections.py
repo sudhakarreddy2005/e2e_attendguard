@@ -18,6 +18,8 @@ SETTINGS = "settings"
 AUDIT_LOGS = "audit_logs"
 ROLES = "roles"
 NOTIFICATIONS = "notifications"
+NOTIFICATION_AUDIT = "notification_audit"
+NOTIFICATION_HISTORY = "notification_history"
 ANALYTICS_CACHE = "analytics_cache"
 
 ALL_COLLECTIONS = [
@@ -33,5 +35,10 @@ ALL_COLLECTIONS = [
     SETTINGS,
     AUDIT_LOGS,
     NOTIFICATIONS,
+    NOTIFICATION_AUDIT,
+    NOTIFICATION_HISTORY,
     ANALYTICS_CACHE,
 ]
+
+
+

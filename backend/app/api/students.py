@@ -120,9 +120,10 @@ async def get_student_image(roll_no: str):
 @router.get("/{roll_no}/analytics")
 async def get_student_analytics(
     roll_no: str,
+    semester: str = None,
     user: TokenPayload = Depends(require_permission("students.view")),
 ):
-    analytics = await StudentService.get_student_analytics(roll_no.upper())
+    analytics = await StudentService.get_student_analytics(roll_no.upper(), semester=semester)
     if not analytics:
         return {"success": False, "error": "Student not found"}
     return {"success": True, "data": analytics}

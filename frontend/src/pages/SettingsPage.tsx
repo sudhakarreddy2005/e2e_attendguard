@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
-import { Sliders, Cpu, Save, Trash2, AlertTriangle, ShieldCheck, Database, Server, RefreshCw, Zap } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Sliders, Cpu, Save, Trash2, AlertTriangle, ShieldCheck, Database, Server, RefreshCw, Zap, Bell, Mail, BookOpen, Layers } from 'lucide-react';
 import { PageTransition } from '../components/ui/PageTransition';
 import { ToggleSwitch } from '../components/ui/ToggleSwitch';
 import { motion, AnimatePresence } from 'framer-motion';
+import { apiClient } from '../services/api';
 
 export const SettingsPage: React.FC = () => {
   const [threshold, setThreshold] = useState('0.60');
@@ -15,10 +16,57 @@ export const SettingsPage: React.FC = () => {
   const [autoSync, setAutoSync] = useState(true);
   const [temperature, setTemperature] = useState('0.2');
 
-  const handleSave = (e: React.FormEvent) => {
+  // Disciplinary Policy State
+  const [academicYear, setAcademicYear] = useState('2025-2026');
+  const [semester, setSemester] = useState('4-1');
+  const [notifEnabled, setNotifEnabled] = useState(true);
+  const [notifMode, setNotifMode] = useState<'live' | 'shadow' | 'dry_run'>('live');
+  const [threshL1, setThreshL1] = useState(5);
+  const [threshL2, setThreshL2] = useState(10);
+  const [threshL3, setThreshL3] = useState(15);
+  const [committeeEmail, setCommitteeEmail] = useState('discipline@vvit.net');
+
+  useEffect(() => {
+    const fetchDisciplineConfig = async () => {
+      try {
+        const resp = await apiClient.get('/api/settings/discipline');
+        if (resp.data?.success && resp.data?.data) {
+          const cfg = resp.data.data;
+          if (cfg.current_academic_year) setAcademicYear(cfg.current_academic_year);
+          if (cfg.current_semester) setSemester(cfg.current_semester);
+          if (cfg.notifications_enabled !== undefined) setNotifEnabled(cfg.notifications_enabled);
+          if (cfg.notification_mode) setNotifMode(cfg.notification_mode);
+          if (cfg.threshold_level_1) setThreshL1(cfg.threshold_level_1);
+          if (cfg.threshold_level_2) setThreshL2(cfg.threshold_level_2);
+          if (cfg.threshold_level_3) setThreshL3(cfg.threshold_level_3);
+          if (cfg.disciplinary_committee_email) setCommitteeEmail(cfg.disciplinary_committee_email);
+        }
+      } catch (err) {
+        console.error('Failed to load discipline config:', err);
+      }
+    };
+    fetchDisciplineConfig();
+  }, []);
+
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSaved(true);
-    setTimeout(() => setSaved(false), 3000);
+    try {
+      await apiClient.put('/api/settings/discipline', {
+        current_academic_year: academicYear,
+        current_semester: semester,
+        notifications_enabled: notifEnabled,
+        notification_mode: notifMode,
+        threshold_level_1: threshL1,
+        threshold_level_2: threshL2,
+        threshold_level_3: threshL3,
+        disciplinary_committee_email: committeeEmail,
+      });
+      setSaved(true);
+      setTimeout(() => setSaved(false), 3000);
+    } catch (err) {
+      console.error('Failed to update discipline settings:', err);
+      alert('Failed to save settings. Please try again.');
+    }
   };
 
   return (
@@ -141,9 +189,182 @@ export const SettingsPage: React.FC = () => {
             <ToggleSwitch
               checked={cnnFallback}
               onChange={setCnnFallback}
-              label="Multi-Pass CNN Fallback Model"
-              description="Deploy secondary CNN face detector if primary HOG detector encounters extreme camera angles."
+              label="CNN High-Accuracy Fallback Engine"
+              description="Invokes deeper ResNet backbone when cosine match is ambiguous (0.55-0.60)."
             />
+          </div>
+        </div>
+
+        {/* Institutional Disciplinary Escalation Policy Card */}
+        <div className="glass-panel p-6 sm:p-7 rounded-[28px] shadow-lg space-y-6 border border-white/50 dark:border-white/10 bg-white/70 dark:bg-slate-950/70 backdrop-blur-2xl">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-2xl bg-[#FF9500]/15 text-[#FF9500] flex items-center justify-center shrink-0 border border-[#FF9500]/30">
+                <Bell className="w-5 h-5" strokeWidth={2} />
+              </div>
+              <div>
+                <h3 className="text-base font-extrabold text-slate-900 dark:text-white tracking-tight">
+                  Institutional Disciplinary Escalation Policy
+                </h3>
+                <p className="text-xs text-slate-500 font-medium">
+                  Semester-scoped violation thresholds, notification modes, and recipient rules
+                </p>
+              </div>
+            </div>
+            <span className={`px-3 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wide border ${
+              notifMode === 'live'
+                ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/30'
+                : notifMode === 'shadow'
+                ? 'bg-amber-500/10 text-amber-600 border-amber-500/30'
+                : 'bg-slate-500/10 text-slate-500 border-slate-500/30'
+            }`}>
+              {notifMode === 'live' ? '● Live Email Mode' : notifMode === 'shadow' ? '◐ Shadow Test Mode' : '◯ Dry Run Mode'}
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5 text-xs">
+            {/* Active Academic Year */}
+            <div className="space-y-1.5">
+              <label className="font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                <BookOpen className="w-3.5 h-3.5 text-blue-500" /> Academic Year
+              </label>
+              <select
+                value={academicYear}
+                onChange={(e) => setAcademicYear(e.target.value)}
+                className="w-full px-4 py-2.5 rounded-2xl bg-black/5 dark:bg-white/10 border border-black/10 dark:border-white/10 text-slate-900 dark:text-white font-semibold text-xs focus:outline-none focus:border-[#FF9500]"
+              >
+                <option value="2024-2025">2024-2025</option>
+                <option value="2025-2026">2025-2026</option>
+                <option value="2026-2027">2026-2027</option>
+                <option value="2027-2028">2027-2028</option>
+                <option value="2028-2029">2028-2029</option>
+              </select>
+            </div>
+
+            {/* Active Semester */}
+            <div className="space-y-1.5">
+              <label className="font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                <Layers className="w-3.5 h-3.5 text-purple-500" /> Current Semester
+              </label>
+              <select
+                value={semester}
+                onChange={(e) => setSemester(e.target.value)}
+                className="w-full px-4 py-2.5 rounded-2xl bg-black/5 dark:bg-white/10 border border-black/10 dark:border-white/10 text-slate-900 dark:text-white font-semibold text-xs focus:outline-none focus:border-[#FF9500]"
+              >
+                <option value="1-1">1-1 (Year 1, Sem 1)</option>
+                <option value="1-2">1-2 (Year 1, Sem 2)</option>
+                <option value="2-1">2-1 (Year 2, Sem 1)</option>
+                <option value="2-2">2-2 (Year 2, Sem 2)</option>
+                <option value="3-1">3-1 (Year 3, Sem 1)</option>
+                <option value="3-2">3-2 (Year 3, Sem 2)</option>
+                <option value="4-1">4-1 (Year 4, Sem 1)</option>
+                <option value="4-2">4-2 (Year 4, Sem 2)</option>
+              </select>
+            </div>
+
+            {/* Delivery Mode */}
+            <div className="space-y-1.5">
+              <label className="font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                <Mail className="w-3.5 h-3.5 text-emerald-500" /> Dispatch Mode
+              </label>
+              <select
+                value={notifMode}
+                onChange={(e) => setNotifMode(e.target.value as any)}
+                className="w-full px-4 py-2.5 rounded-2xl bg-black/5 dark:bg-white/10 border border-black/10 dark:border-white/10 text-slate-900 dark:text-white font-semibold text-xs focus:outline-none focus:border-[#FF9500]"
+              >
+                <option value="live">Live (Real Recipient MS Graph API)</option>
+                <option value="shadow">Shadow (Reroute to Test Email)</option>
+                <option value="dry_run">Dry Run (Audit Log Only)</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
+            {/* Level 1 Card */}
+            <div className="p-4 rounded-2xl bg-blue-500/5 border border-blue-500/20 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="font-extrabold text-blue-600 dark:text-blue-400 text-xs">Level 1 Advisory</span>
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-600 dark:text-blue-300">
+                  Student Only
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-500 font-medium">Early warning self-correction advisory email.</p>
+              <div className="flex items-center gap-2 pt-1">
+                <span className="text-xs font-bold text-slate-700 dark:text-slate-300">Threshold:</span>
+                <input
+                  type="number"
+                  value={threshL1}
+                  onChange={(e) => setThreshL1(Number(e.target.value))}
+                  className="w-16 px-2.5 py-1 rounded-xl bg-white dark:bg-white/10 border border-blue-500/30 text-center font-bold text-xs"
+                />
+                <span className="text-[11px] text-slate-400 font-medium">Violations</span>
+              </div>
+            </div>
+
+            {/* Level 2 Card */}
+            <div className="p-4 rounded-2xl bg-amber-500/5 border border-amber-500/20 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="font-extrabold text-amber-600 dark:text-amber-400 text-xs">Level 2 Warning</span>
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-600 dark:text-amber-300">
+                  Student + Counsellor
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-500 font-medium">Formal warning notice and mandatory counselling.</p>
+              <div className="flex items-center gap-2 pt-1">
+                <span className="text-xs font-bold text-slate-700 dark:text-slate-300">Threshold:</span>
+                <input
+                  type="number"
+                  value={threshL2}
+                  onChange={(e) => setThreshL2(Number(e.target.value))}
+                  className="w-16 px-2.5 py-1 rounded-xl bg-white dark:bg-white/10 border border-amber-500/30 text-center font-bold text-xs"
+                />
+                <span className="text-[11px] text-slate-400 font-medium">Violations</span>
+              </div>
+            </div>
+
+            {/* Level 3 Card */}
+            <div className="p-4 rounded-2xl bg-rose-500/5 border border-rose-500/20 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="font-extrabold text-rose-600 dark:text-rose-400 text-xs">Level 3 Escalation</span>
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-600 dark:text-rose-300">
+                  Student + Counsellor + Committee
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-500 font-medium">Official referral to Disciplinary Committee.</p>
+              <div className="flex items-center gap-2 pt-1">
+                <span className="text-xs font-bold text-slate-700 dark:text-slate-300">Threshold:</span>
+                <input
+                  type="number"
+                  value={threshL3}
+                  onChange={(e) => setThreshL3(Number(e.target.value))}
+                  className="w-16 px-2.5 py-1 rounded-xl bg-white dark:bg-white/10 border border-rose-500/30 text-center font-bold text-xs"
+                />
+                <span className="text-[11px] text-slate-400 font-medium">Violations</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5 pt-2">
+            <div>
+              <label className="block text-slate-700 dark:text-slate-300 font-bold mb-1.5">
+                Disciplinary Committee Official Address
+              </label>
+              <input
+                type="email"
+                value={committeeEmail}
+                onChange={(e) => setCommitteeEmail(e.target.value)}
+                className="w-full px-4 py-2.5 rounded-2xl bg-black/5 dark:bg-white/10 border border-black/10 dark:border-white/10 text-slate-900 dark:text-white font-semibold text-xs focus:outline-none focus:border-[#FF9500]"
+              />
+            </div>
+
+            <div className="flex items-end pb-1">
+              <ToggleSwitch
+                checked={notifEnabled}
+                onChange={setNotifEnabled}
+                label="Automated Email Escalations Enabled"
+                description="When enabled, newly created violations trigger automatic email notifications."
+              />
+            </div>
           </div>
         </div>
 

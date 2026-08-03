@@ -44,10 +44,36 @@ class ViolationRepository(BaseRepository):
         return await self.aggregate(pipeline)
 
     async def find_by_roll_no(self, roll_no: str) -> list[dict]:
+        clean_roll = roll_no.strip().upper()
         return await self.find_many(
-            {"roll_no": roll_no},
+            {"$or": [{"roll_no": clean_roll}, {"roll_no": roll_no}]},
             sort=[("created_at", -1)],
         )
+
+    async def find_by_student_and_semester(
+        self, roll_no: str, academic_year: Optional[str] = None, semester: Optional[str] = None
+    ) -> list[dict]:
+        """Fetch all violations for a student in a specific academic year & semester."""
+        clean_roll = roll_no.strip().upper()
+        query: dict = {"$or": [{"roll_no": clean_roll}, {"roll_no": roll_no}]}
+        if academic_year:
+            query["academic_year"] = academic_year
+        if semester:
+            query["semester"] = semester
+        return await self.find_many(query, sort=[("created_at", -1)])
+
+    async def count_by_student_and_semester(
+        self, roll_no: str, academic_year: Optional[str] = None, semester: Optional[str] = None
+    ) -> int:
+        """Count total violations for a student in a specific academic year & semester."""
+        clean_roll = roll_no.strip().upper()
+        query: dict = {"$or": [{"roll_no": clean_roll}, {"roll_no": roll_no}]}
+        if academic_year:
+            query["academic_year"] = academic_year
+        if semester:
+            query["semester"] = semester
+        return await self.count(query)
+
 
     async def find_today(self) -> list[dict]:
         from datetime import datetime, time, timezone

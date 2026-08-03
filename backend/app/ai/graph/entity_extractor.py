@@ -47,4 +47,21 @@ def extract_entities(query: str) -> Dict[str, Any]:
     elif "hod" in q_lower:
         entities["role"] = "hod"
 
+    # Sort Direction extraction (low / lowest / least / fewest vs high / highest / most / top)
+    if any(word in q_lower for word in ["low", "lowest", "least", "fewest", "min", "minimum", "clean"]):
+        entities["sort_direction"] = "asc"
+    elif any(word in q_lower for word in ["high", "highest", "most", "top", "max", "maximum", "worst"]):
+        entities["sort_direction"] = "desc"
+    else:
+        entities["sort_direction"] = "desc"  # Default sorting
+
+    # Limit extraction (e.g. "top 5", "list of 3", "10 students", "5")
+    limit_match = re.search(r"\b(?:top|list of|first|limit|show)\s+(\d+)\b|\b(\d+)\s+students\b", q_lower)
+    if limit_match:
+        val = limit_match.group(1) or limit_match.group(2)
+        entities["limit"] = int(val)
+    else:
+        entities["limit"] = 10  # Default limit
+
     return entities
+

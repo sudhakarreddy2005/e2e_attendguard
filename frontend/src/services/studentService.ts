@@ -11,8 +11,9 @@ export const studentService = {
     return `/api/students/${rollNo}/image`;
   },
 
-  getStudentAnalytics: async (rollNo: string): Promise<StudentAnalytics> => {
-    const res = await apiClient.get(`/api/students/${rollNo}/analytics`);
+  getStudentAnalytics: async (rollNo: string, semester?: string): Promise<StudentAnalytics> => {
+    const url = `/api/students/${rollNo}/analytics${semester ? `?semester=${encodeURIComponent(semester)}` : ''}`;
+    const res = await apiClient.get(url);
     return res.data.data;
   },
 
