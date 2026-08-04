@@ -45,5 +45,6 @@ export interface StudentAnalytics {
     remark: string;
     location: string;
     status: string;
+    semester?: string;
   }>;
 }

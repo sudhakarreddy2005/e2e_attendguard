@@ -70,6 +70,43 @@ class NotificationHistoryRepository(BaseRepository):
             sort=[("sent_at", -1)],
         )
 
+    async def reset_invalidated_levels(
+        self,
+        roll_number: str,
+        academic_year: str,
+        semester: str,
+        current_count: int,
+        threshold_level_1: int = 5,
+        threshold_level_2: int = 10,
+        threshold_level_3: int = 15,
+    ) -> int:
+        """
+        If student's semester violation count drops below an escalation threshold due to violation deletion,
+        remove notification history for that level (and higher levels)
+        so that re-crossing the threshold triggers notifications again.
+        """
+        clean_roll = roll_number.strip().upper()
+        invalidated_levels: List[int] = []
+
+        if current_count < threshold_level_1:
+            invalidated_levels = [1, 2, 3]
+        elif current_count < threshold_level_2:
+            invalidated_levels = [2, 3]
+        elif current_count < threshold_level_3:
+            invalidated_levels = [3]
+
+        if not invalidated_levels:
+            return 0
+
+        query = {
+            "roll_number": {"$regex": f"^{clean_roll}$", "$options": "i"},
+            "academic_year": academic_year,
+            "semester": semester,
+            "notification_level": {"$in": invalidated_levels},
+        }
+
+        return await self.delete_many(query)
+
 
 # Singleton instance
 notification_history_repo = NotificationHistoryRepository()

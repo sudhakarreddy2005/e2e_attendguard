@@ -95,6 +95,11 @@ class BaseRepository:
         result = await self.collection.delete_one(query)
         return result.deleted_count > 0
 
+    async def delete_many(self, query: dict) -> int:
+        """Delete multiple documents matching query and return deleted count."""
+        result = await self.collection.delete_many(query)
+        return result.deleted_count
+
     async def aggregate(self, pipeline: list) -> list[dict]:
         """Run an aggregation pipeline."""
         docs = []

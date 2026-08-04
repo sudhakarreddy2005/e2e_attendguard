@@ -98,9 +98,43 @@ class ViolationService:
 
         roll_no = violation["roll_no"]
         v_type = violation["type"]
+        v_sem = violation.get("semester")
 
         await violation_repo.delete_one({"_id": __import__("bson").ObjectId(violation_id)})
-        await student_repo.decrement_violation(roll_no, v_type)
+        await student_repo.decrement_violation(roll_no, v_type, semester=v_sem)
+
+        # Check updated semester count and reset any invalidated notification history levels
+        try:
+            from app.services.discipline_config_service import discipline_config_service
+            config = await discipline_config_service.get_config()
+            acad_year = violation.get("academic_year") or config.get("current_academic_year", "2025-2026")
+            sem = v_sem or config.get("current_semester", "3-1")
+
+            sem_violations = await violation_repo.find_by_student_and_semester(
+                roll_no=roll_no,
+                academic_year=acad_year,
+                semester=sem,
+            )
+            updated_count = len(sem_violations)
+
+            l1 = int(config.get("threshold_level_1", 5))
+            l2 = int(config.get("threshold_level_2", 10))
+            l3 = int(config.get("threshold_level_3", 15))
+
+            from app.repositories.notification_history_repository import notification_history_repo
+            cleared = await notification_history_repo.reset_invalidated_levels(
+                roll_number=roll_no,
+                academic_year=acad_year,
+                semester=sem,
+                current_count=updated_count,
+                threshold_level_1=l1,
+                threshold_level_2=l2,
+                threshold_level_3=l3,
+            )
+            if cleared > 0:
+                logger.info("[Violation Service] Reset %d notification history entry/entries for %s semester %s (count dropped to %d)", cleared, roll_no, sem, updated_count)
+        except Exception as e:
+            logger.error("[Violation Service Error] Failed to reset notification history on deletion: %s", e)
 
         await audit_repo.log_action(
             user=deleted_by,

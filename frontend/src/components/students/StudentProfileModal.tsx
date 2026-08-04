@@ -40,6 +40,7 @@ export const StudentProfileModal: React.FC<StudentProfileModalProps> = ({ studen
   const activeSem = student?.current_semester || '4-1';
   const [selectedSem, setSelectedSem] = useState<string>(activeSem);
   const [analytics, setAnalytics] = useState<StudentAnalytics | null>(null);
+  const [semTotals, setSemTotals] = useState<Record<string, number>>({});
   const [isLoading, setIsLoading] = useState(false);
   const { isDark } = useTheme();
 
@@ -48,7 +49,12 @@ export const StudentProfileModal: React.FC<StudentProfileModalProps> = ({ studen
       setIsLoading(true);
       studentService
         .getStudentAnalytics(student.roll_no, selectedSem)
-        .then((data) => setAnalytics(data))
+        .then((data) => {
+          setAnalytics(data);
+          if (data && typeof data.total === 'number') {
+            setSemTotals((prev) => ({ ...prev, [selectedSem]: data.total }));
+          }
+        })
         .catch((err) => console.error(err))
         .finally(() => setIsLoading(false));
     }
@@ -182,9 +188,11 @@ export const StudentProfileModal: React.FC<StudentProfileModalProps> = ({ studen
               {ALL_SEMESTERS.map((semKey) => {
                 const isSelected = semKey === selectedSem;
                 const isCurrentActive = semKey === activeSem;
-                const count = (isSelected && analytics)
-                  ? analytics.total
-                  : (student.semester_violations?.[semKey] ?? (semKey === activeSem ? student.violations_count : 0));
+                const count = semTotals[semKey] !== undefined
+                  ? semTotals[semKey]
+                  : ((isSelected && analytics)
+                    ? analytics.total
+                    : (student.semester_violations?.[semKey] ?? (semKey === activeSem ? student.violations_count : 0)));
 
                 return (
                   <button

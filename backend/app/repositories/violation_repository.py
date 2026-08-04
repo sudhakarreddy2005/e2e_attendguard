@@ -55,11 +55,14 @@ class ViolationRepository(BaseRepository):
     ) -> list[dict]:
         """Fetch all violations for a student in a specific academic year & semester."""
         clean_roll = roll_no.strip().upper()
-        query: dict = {"$or": [{"roll_no": clean_roll}, {"roll_no": roll_no}]}
-        if academic_year:
-            query["academic_year"] = academic_year
+        conditions: list[dict] = [{"$or": [{"roll_no": clean_roll}, {"roll_no": roll_no}]}]
+
         if semester:
-            query["semester"] = semester
+            conditions.append({"semester": semester})
+        elif academic_year:
+            conditions.append({"academic_year": academic_year})
+
+        query = {"$and": conditions} if len(conditions) > 1 else conditions[0]
         return await self.find_many(query, sort=[("created_at", -1)])
 
     async def count_by_student_and_semester(
@@ -67,11 +70,14 @@ class ViolationRepository(BaseRepository):
     ) -> int:
         """Count total violations for a student in a specific academic year & semester."""
         clean_roll = roll_no.strip().upper()
-        query: dict = {"$or": [{"roll_no": clean_roll}, {"roll_no": roll_no}]}
-        if academic_year:
-            query["academic_year"] = academic_year
+        conditions: list[dict] = [{"$or": [{"roll_no": clean_roll}, {"roll_no": roll_no}]}]
+
         if semester:
-            query["semester"] = semester
+            conditions.append({"semester": semester})
+        elif academic_year:
+            conditions.append({"academic_year": academic_year})
+
+        query = {"$and": conditions} if len(conditions) > 1 else conditions[0]
         return await self.count(query)
 
 
