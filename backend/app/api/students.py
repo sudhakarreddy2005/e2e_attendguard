@@ -63,16 +63,26 @@ async def register_student(
 
         student_id = await StudentService.create_student(student_data, created_by=user.sub)
 
+        # Automatically extract and store 512D ArcFace embedding for immediate detection readiness
+        try:
+            await StudentService.register_student_embedding(roll_no_clean, image_path)
+        except Exception as embed_err:
+            # If face extraction fails, roll back the created student record
+            await StudentService.delete_student(roll_no_clean, deleted_by="system")
+            raise HTTPException(status_code=400, detail=str(embed_err))
+
         return {
             "success": True,
             "roll_no": roll_no_clean,
-            "message": "Student registered successfully",
+            "message": "Student registered successfully with 512D ArcFace vision profile",
         }
 
+    except HTTPException:
+        raise
     except Exception as e:
         if image_path.exists():
             shutil.rmtree(storage_dir, ignore_errors=True)
-        raise
+        raise HTTPException(status_code=500, detail=f"Failed to register student: {str(e)}")
 
 
 @router.get("/")

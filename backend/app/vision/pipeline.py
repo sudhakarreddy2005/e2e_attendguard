@@ -169,7 +169,7 @@ class RecognitionPipeline:
                 face_embedding, candidates
             )
 
-            if best_match and similarity_engine.is_match(similarity):
+            if best_match:
                 confidence = round(similarity * 100, 2)
                 matches.append({
                     "roll_no": best_match.get("student_id", ""),

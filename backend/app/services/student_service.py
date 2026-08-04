@@ -100,7 +100,7 @@ class StudentService:
         image_filenames: list[str],
         registration_status: str = "active",
     ) -> bool:
-        """Update face registration metadata (NOT the embedding itself)."""
+        """Update face registration metadata."""
         return await student_repo.update_one(
             {"roll_no": roll_no.upper()},
             {
@@ -111,6 +111,58 @@ class StudentService:
                 },
             },
         )
+
+    @staticmethod
+    async def register_student_embedding(roll_no: str, image_path: Path) -> dict:
+        """Extract 512D ArcFace embedding from student photo and store in face_embeddings collection."""
+        import cv2
+        from app.vision.detector import detector
+        from app.vision.preprocessor import preprocessor
+        from app.repositories.embedding_repository import embedding_repo
+
+        image = cv2.imread(str(image_path))
+        if image is None:
+            raise ValidationError("Invalid image file format")
+
+        quality = preprocessor.assess_quality(image)
+        processed = preprocessor.preprocess(image)
+        faces = detector.detect(processed, max_faces=1)
+
+        if not faces or faces[0].get("embedding") is None:
+            raise ValidationError("No clear face detected in the registration photo. Please provide a clear facial photo of the student.")
+
+        embedding = faces[0]["embedding"]
+
+        # Clear any existing embeddings for this student to keep primary embedding clean
+        await embedding_repo.delete_by_student(roll_no.upper())
+
+        embed_doc = {
+            "student_id": roll_no.upper(),
+            "embedding": embedding,
+            "embedding_dimension": len(embedding),
+            "embedding_model": "arcface",
+            "model_version": settings.EMBEDDING_MODEL,
+            "quality_score": quality.get("overall_quality", 1.0),
+            "blur_score": quality.get("blur_score", 100.0),
+            "lighting_score": quality.get("lighting_score", 1.0),
+            "image_path": str(image_path),
+            "image_filename": image_path.name,
+            "is_primary": True,
+            "status": "active",
+        }
+        await embedding_repo.insert_one(embed_doc)
+
+        await student_repo.update_one(
+            {"roll_no": roll_no.upper()},
+            {
+                "$set": {
+                    "face.registration_status": "active",
+                    "face.image_count": 1,
+                }
+            },
+        )
+        logger.info("Generated and stored 512D ArcFace embedding for student %s", roll_no)
+        return embed_doc
 
     @staticmethod
     async def get_student_analytics(

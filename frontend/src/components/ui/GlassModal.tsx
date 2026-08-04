@@ -40,6 +40,7 @@ export const GlassModal = forwardRef<HTMLDivElement, GlassModalProps>(({
     <AnimatePresence>
       {isOpen && (
         <motion.div
+          key="glass-modal-backdrop"
           ref={backdropRef}
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
