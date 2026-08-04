@@ -80,6 +80,7 @@ class MSGraphNotificationProvider(BaseNotificationProvider):
     ) -> Dict[str, Any]:
         """Send email using Microsoft Graph API POST /users/{SENDER_UPN}/sendMail."""
         sender = sender_upn or getattr(settings, "SENDER_UPN", "23BQ1A05A9@vvit.net")
+        sender_name = getattr(settings, "SENDER_NAME", "AttendGuard Bot")
         clean_recipients = [r.strip() for r in recipients if r and "@" in r]
 
         if not clean_recipients:
@@ -93,7 +94,7 @@ class MSGraphNotificationProvider(BaseNotificationProvider):
                 "success": True,
                 "status": "LIVE_SENT_SANDBOX",
                 "provider": "MS_GRAPH",
-                "sender": sender,
+                "sender": f"{sender_name} <{sender}>",
                 "recipients": clean_recipients,
                 "details": f"Simulated live dispatch via Graph API endpoints for sender {sender}",
             }
@@ -106,6 +107,18 @@ class MSGraphNotificationProvider(BaseNotificationProvider):
                 "subject": subject,
                 "body": {"contentType": "HTML", "content": html_body},
                 "toRecipients": to_recipients,
+                "from": {
+                    "emailAddress": {
+                        "name": sender_name,
+                        "address": sender,
+                    }
+                },
+                "sender": {
+                    "emailAddress": {
+                        "name": sender_name,
+                        "address": sender,
+                    }
+                },
             },
             "saveToSentItems": "true",
         }

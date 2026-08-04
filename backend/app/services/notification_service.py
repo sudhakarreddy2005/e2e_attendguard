@@ -35,14 +35,21 @@ class NotificationService:
 
     @staticmethod
     def _format_date(dt_val: Any) -> str:
-        """Format datetime or timestamp into readable institutional format."""
+        """Format datetime or timestamp into Indian Standard Time (IST, UTC+5:30)."""
+        IST = datetime.timezone(datetime.timedelta(hours=5, minutes=30), name="IST")
         if not dt_val:
-            return datetime.datetime.now(datetime.timezone.utc).strftime("%b %d, %Y %I:%M %p UTC")
-        if isinstance(dt_val, (int, float)):
-            return datetime.datetime.fromtimestamp(dt_val, datetime.timezone.utc).strftime("%b %d, %Y %I:%M %p UTC")
-        if hasattr(dt_val, "strftime"):
-            return dt_val.strftime("%b %d, %Y %I:%M %p UTC")
-        return str(dt_val)
+            dt = datetime.datetime.now(datetime.timezone.utc)
+        elif isinstance(dt_val, (int, float)):
+            dt = datetime.datetime.fromtimestamp(dt_val, datetime.timezone.utc)
+        elif isinstance(dt_val, datetime.datetime):
+            dt = dt_val
+            if dt.tzinfo is None:
+                dt = dt.replace(tzinfo=datetime.timezone.utc)
+        else:
+            return str(dt_val)
+
+        dt_ist = dt.astimezone(IST)
+        return dt_ist.strftime("%b %d, %Y %I:%M %p IST")
 
     @staticmethod
     async def process_disciplinary_escalation(

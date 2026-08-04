@@ -92,6 +92,7 @@ class Settings(BaseSettings):
     CLIENT_ID: Optional[str] = "8b51b70f-d5de-4b5f-b347-a8b477ea361e"
     CLIENT_SECRET: Optional[str] = None
     SENDER_UPN: str = "23bq1a05a9@vvit.net"
+    SENDER_NAME: str = "AttendGuard Bot"
     NOTIFICATION_MODE: str = Field(default="dry_run", description="dry_run (DEFAULT) | shadow | live")
 
 
