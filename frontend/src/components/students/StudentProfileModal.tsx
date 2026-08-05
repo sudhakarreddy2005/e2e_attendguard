@@ -62,7 +62,7 @@ export const StudentProfileModal: React.FC<StudentProfileModalProps> = ({ studen
 
   if (!student) return null;
 
-  const imageSrc = studentService.getStudentImage(student.roll_no);
+  const imageSrc = studentService.getStudentImage(student.roll_no, student.updated_at || student.created_at);
   const displayYear = getYearFromSemester(selectedSem);
 
   // Exact 6-Month Violation Curve Data

@@ -226,7 +226,7 @@ export const StudentsPage: React.FC = () => {
                       <div className="flex items-center gap-3.5">
                         <div className="w-11 h-11 rounded-full bg-slate-200 dark:bg-slate-800 overflow-hidden border-2 border-white/80 dark:border-white/20 shadow-sm ring-2 ring-pink-300/30 shrink-0">
                           <img
-                            src={studentService.getStudentImage(s.roll_no)}
+                            src={studentService.getStudentImage(s.roll_no, s.updated_at)}
                             alt={s.name}
                             className="w-full h-full object-cover"
                             onError={(e) => {

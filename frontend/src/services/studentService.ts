@@ -7,8 +7,9 @@ export const studentService = {
     return res.data;
   },
 
-  getStudentImage: (rollNo: string): string => {
-    return `/api/students/${rollNo}/image`;
+  getStudentImage: (rollNo: string, updatedAt?: string | number): string => {
+    const ts = updatedAt ? new Date(updatedAt).getTime() : Date.now();
+    return `/api/students/${encodeURIComponent(rollNo)}/image?t=${ts}`;
   },
 
   getStudentAnalytics: async (rollNo: string, semester?: string): Promise<StudentAnalytics> => {
@@ -34,8 +35,11 @@ export const studentService = {
     return res.data;
   },
 
-  updateStudent: async (rollNo: string, payload: Partial<Student> & { phone?: string; email?: string }): Promise<any> => {
-    const res = await apiClient.put(`/api/students/${rollNo}`, payload);
+  updateStudent: async (rollNo: string, payload: FormData | (Partial<Student> & { phone?: string; email?: string; new_roll_no?: string })): Promise<any> => {
+    const isFormData = payload instanceof FormData;
+    const res = await apiClient.put(`/api/students/${rollNo}`, payload, {
+      headers: isFormData ? { 'Content-Type': 'multipart/form-data' } : {},
+    });
     return res.data;
   },
 

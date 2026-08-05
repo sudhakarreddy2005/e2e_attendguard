@@ -248,28 +248,68 @@ class StudentService:
         }
 
     @staticmethod
-    async def update_student(roll_no: str, update_data: dict, updated_by: str = "system") -> dict:
+    async def update_student(
+        roll_no: str,
+        update_data: dict,
+        new_image_bytes: Optional[bytes] = None,
+        new_image_filename: Optional[str] = None,
+        updated_by: str = "system",
+    ) -> dict:
         """
-        Update student profile fields (name, year, department, section, contact_info).
-        Restricted to authorized roles.
+        Update student profile fields. Supports:
+          - Modifying roll_no with cascading database & filesystem storage directory updates
+          - Uploading a new face photo, extracting 512D ArcFace embedding, replacing old embeddings
+          - Standard field updates (name, year, department, section, contact_info)
         """
+        import shutil
+        from app.repositories.embedding_repository import embedding_repo
+        from app.repositories.violation_repository import violation_repo
+
         roll_no_clean = roll_no.strip().upper()
         student = await student_repo.find_by_roll_no(roll_no_clean)
         if not student:
             raise StudentNotFoundError(f"Student {roll_no_clean} not found")
 
+        old_dept = student.get("department", "CSE").upper()
+        old_sec = student.get("section", "A").upper()
+
+        new_roll = update_data.get("new_roll_no") or update_data.get("roll_no")
+        target_roll = roll_no_clean
+        if new_roll and str(new_roll).strip().upper() != roll_no_clean:
+            target_roll = str(new_roll).strip().upper()
+            existing = await student_repo.find_by_roll_no(target_roll)
+            if existing:
+                raise DuplicateStudentError(f"Roll number {target_roll} is already registered to another student")
+
+        target_dept = str(update_data.get("department", old_dept)).strip().upper()
+        target_sec = str(update_data.get("section", old_sec)).strip().upper()
+
+        # Handle storage directory migration for student training images
+        old_storage_dir = settings.STORAGE_TRAINING / old_dept / old_sec / roll_no_clean
+        new_storage_dir = settings.STORAGE_TRAINING / target_dept / target_sec / target_roll
+        new_storage_dir.mkdir(parents=True, exist_ok=True)
+
+        if old_storage_dir.exists() and old_storage_dir.resolve() != new_storage_dir.resolve():
+            for item in old_storage_dir.iterdir():
+                if item.is_file():
+                    shutil.copy2(item, new_storage_dir / item.name)
+            shutil.rmtree(old_storage_dir, ignore_errors=True)
+
         fields_to_update: dict = {}
+        if target_roll != roll_no_clean:
+            fields_to_update["roll_no"] = target_roll
+
         if "name" in update_data and update_data["name"]:
             fields_to_update["name"] = str(update_data["name"]).strip().title()
 
-        if "year" in update_data:
+        if "year" in update_data and update_data["year"]:
             fields_to_update["year"] = str(update_data["year"]).strip()
 
         if "department" in update_data and update_data["department"]:
-            fields_to_update["department"] = str(update_data["department"]).strip().upper()
+            fields_to_update["department"] = target_dept
 
         if "section" in update_data and update_data["section"]:
-            fields_to_update["section"] = str(update_data["section"]).strip().upper()
+            fields_to_update["section"] = target_sec
 
         phone = update_data.get("phone")
         email = update_data.get("email")
@@ -281,8 +321,31 @@ class StudentService:
                 contact_info["email"] = str(email).strip()
             fields_to_update["contact_info"] = contact_info
 
-        if not fields_to_update:
-            return student
+        # Handle new registration face image upload & 512D ArcFace re-embedding
+        if new_image_bytes:
+            import uuid
+            # Clean out old photo files in storage directory to avoid serving stale images
+            if new_storage_dir.exists():
+                for old_f in new_storage_dir.glob("*.*"):
+                    if old_f.is_file() and old_f.suffix.lower() in {".jpeg", ".jpg", ".png"}:
+                        try:
+                            old_f.unlink()
+                        except Exception:
+                            pass
+
+            image_fn = f"{uuid.uuid4().hex}.jpeg"
+            img_save_path = new_storage_dir / image_fn
+            with open(img_save_path, "wb") as f:
+                f.write(new_image_bytes)
+
+            # Extract new embedding & delete old embeddings for this student
+            await StudentService.register_student_embedding(target_roll, img_save_path)
+
+            fields_to_update["face"] = {
+                "image_filenames": [image_fn],
+                "registration_status": "active",
+                "image_count": 1,
+            }
 
         fields_to_update["updated_at"] = datetime.now(timezone.utc)
 
@@ -291,16 +354,27 @@ class StudentService:
             {"$set": fields_to_update},
         )
 
+        # If roll_no changed, perform cascading updates across all collections
+        if target_roll != roll_no_clean:
+            await embedding_repo.collection.update_many(
+                {"student_id": roll_no_clean},
+                {"$set": {"student_id": target_roll}},
+            )
+            await violation_repo.collection.update_many(
+                {"roll_no": roll_no_clean},
+                {"$set": {"roll_no": target_roll}},
+            )
+
         await audit_repo.log_action(
             user=updated_by,
             action="update",
             entity_type="student",
-            entity_id=roll_no_clean,
-            description=f"Updated profile for student {roll_no_clean}: {list(fields_to_update.keys())}",
+            entity_id=target_roll,
+            description=f"Updated student profile for {target_roll} (was {roll_no_clean}): {list(fields_to_update.keys())}",
         )
 
-        logger.info("Updated student profile for %s by %s: %s", roll_no_clean, updated_by, fields_to_update)
-        return await student_repo.find_by_roll_no(roll_no_clean)
+        logger.info("Updated student profile for %s (target: %s) by %s", roll_no_clean, target_roll, updated_by)
+        return await student_repo.find_by_roll_no(target_roll)
 
     @staticmethod
     async def search_students(query: str, limit: int = 20) -> list[dict]:

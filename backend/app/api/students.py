@@ -4,7 +4,7 @@ import shutil
 import uuid
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import FileResponse, Response
 
 from app.api.deps import require_permission, require_auth
@@ -104,7 +104,7 @@ async def get_students(
 
 @router.get("/{roll_no}/image")
 async def get_student_image(roll_no: str):
-    """Serve a student's registration photo."""
+    """Serve a student's registration photo with strict cache control."""
     try:
         student = await StudentService.get_student_by_roll_no(roll_no.upper())
     except StudentNotFoundError:
@@ -122,9 +122,23 @@ async def get_student_image(roll_no: str):
     image_path = settings.STORAGE_TRAINING / dept / section / roll_no.upper() / target_filename
 
     if not image_path.exists():
+        dir_path = settings.STORAGE_TRAINING / dept / section / roll_no.upper()
+        if dir_path.exists():
+            files = [
+                f for f in dir_path.iterdir()
+                if f.is_file() and f.suffix.lower() in {".jpeg", ".jpg", ".png"}
+            ]
+            if files:
+                image_path = files[-1]
+
+    if not image_path.exists():
         return {"success": False, "error": "Image not found on server"}
 
-    return FileResponse(str(image_path), media_type="image/jpeg")
+    response = FileResponse(str(image_path), media_type="image/jpeg")
+    response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+    response.headers["Pragma"] = "no-cache"
+    response.headers["Expires"] = "0"
+    return response
 
 
 @router.get("/{roll_no}/analytics")
@@ -142,19 +156,72 @@ async def get_student_analytics(
 @router.put("/{roll_no}")
 async def update_student(
     roll_no: str,
-    payload: dict,
+    request: Request,
     user: TokenPayload = Depends(require_permission("students.edit")),
 ):
-    """Update student profile details."""
+    """
+    Update student profile details.
+    - General profile fields can be edited by DEO/Admin.
+    - Roll Number (new_roll_no) and Face Photo (image) can ONLY be edited by ADMIN or SUPER_ADMIN.
+    - Uploading a new face photo automatically extracts a new 512D ArcFace embedding and removes old embeddings.
+    """
+    from app.core.exceptions import DuplicateStudentError
+
+    content_type = request.headers.get("content-type", "")
+
+    new_image_bytes = None
+    new_image_filename = None
+    payload = {}
+
+    if "multipart/form-data" in content_type:
+        form = await request.form()
+        payload = {k: v for k, v in form.items() if k != "image"}
+        image_field = form.get("image")
+        if image_field and hasattr(image_field, "read"):
+            new_image_bytes = await image_field.read()
+            new_image_filename = getattr(image_field, "filename", "updated_face.jpeg")
+    else:
+        try:
+            payload = await request.json()
+        except Exception:
+            payload = {}
+
+    # Strict role verification: Roll number changes and Face image updates are ADMIN ONLY
+    user_role_norm = (user.role or "").upper().replace("_", "")
+    is_admin = user_role_norm in ("ADMIN", "SUPERADMIN")
+
+    new_roll = payload.get("new_roll_no") or payload.get("roll_no")
+    if new_roll and str(new_roll).strip().upper() != roll_no.strip().upper():
+        if not is_admin:
+            raise HTTPException(
+                status_code=403,
+                detail="Access Denied: Only Administrators can modify student Roll Numbers."
+            )
+
+    if new_image_bytes and len(new_image_bytes) > 0:
+        if not is_admin:
+            raise HTTPException(
+                status_code=403,
+                detail="Access Denied: Only Administrators can update student face registration photos."
+            )
+
     try:
         updated_student = await StudentService.update_student(
-            roll_no.upper(), payload, updated_by=user.sub
+            roll_no=roll_no.strip().upper(),
+            update_data=payload,
+            new_image_bytes=new_image_bytes,
+            new_image_filename=new_image_filename,
+            updated_by=user.sub,
         )
         return {"success": True, "data": updated_student}
     except StudentNotFoundError:
-        return {"success": False, "error": "Student not found"}
+        return {"success": False, "error": f"Student {roll_no} not found"}
+    except DuplicateStudentError as de:
+        return {"success": False, "error": str(de)}
+    except ValidationError as ve:
+        return {"success": False, "error": str(ve)}
     except Exception as e:
-        return {"success": False, "error": str(e)}
+        return {"success": False, "error": f"Failed to update student: {str(e)}"}
 
 
 @router.get("/import-template")
