@@ -38,7 +38,6 @@ Traditional higher education infrastructure suffers from systemic operational bo
 ┌──────────────────────────────────────────────────┬──────────────────────────────────────────────────┐
 │ Traditional Institutional Bottlenecks             │ AttendGuard Enterprise Solution                  │
 ├──────────────────────────────────────────────────┼──────────────────────────────────────────────────┤
-│ ❌ Manual Roll-Call & Fraudulent Proxy Attendance  │ ✅ Automated 512D ArcFace Biometrics (<38ms match) │
 │ ❌ Fragmented CCTV & Unmonitored Campus Gates   │ ✅ Multi-Zone Realtime Telemetry Monitoring      │
 │ ❌ Slow Manual Disciplinary Escalation & Mails   │ ✅ Automated Microsoft Graph Email Engine         │
 │ ❌ Opaque Departmental Data & Bunk Anomaly Flags │ ✅ Executive Dashboards & Cohort Analytics       │
