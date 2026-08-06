@@ -45,6 +45,8 @@ export const StudentProfileModal: React.FC<StudentProfileModalProps> = ({ studen
   const [timelineLimit, setTimelineLimit] = useState<number>(5);
   const { isDark } = useTheme();
 
+  const backdropRef = React.useRef<HTMLDivElement>(null);
+
   useEffect(() => {
     if (student) {
       setIsLoading(true);
@@ -61,6 +63,18 @@ export const StudentProfileModal: React.FC<StudentProfileModalProps> = ({ studen
         .finally(() => setIsLoading(false));
     }
   }, [student, selectedSem]);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    if (student) {
+      document.addEventListener('keydown', handleKeyDown);
+    }
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [student, onClose]);
 
   if (!student) return null;
 
@@ -113,8 +127,14 @@ export const StudentProfileModal: React.FC<StudentProfileModalProps> = ({ studen
   const visibleTimeline = timelineItems.slice(0, timelineLimit);
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-xl flex items-center justify-center p-4">
-      <div className="w-full max-w-3xl max-h-[92vh] glass-panel rounded-[32px] shadow-2xl overflow-hidden flex flex-col border border-white/70 dark:border-white/10">
+    <div
+      ref={backdropRef}
+      onClick={(e) => {
+        if (e.target === backdropRef.current) onClose();
+      }}
+      className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-xl flex items-center justify-center p-4 cursor-pointer"
+    >
+      <div className="w-full max-w-3xl max-h-[92vh] glass-panel rounded-[32px] shadow-2xl overflow-hidden flex flex-col border border-white/70 dark:border-white/10 cursor-default">
         {/* Soft Liquid Pinkish & Whitish Header */}
         <div className="p-6 sm:p-7 bg-gradient-to-r from-rose-300/80 via-pink-200/90 to-rose-200/80 dark:from-rose-950/80 dark:via-pink-950/60 dark:to-purple-950/80 backdrop-blur-2xl text-slate-800 dark:text-slate-100 relative flex flex-col sm:flex-row items-center sm:items-start justify-between gap-5 border-b border-white/60 dark:border-white/10 shadow-sm">
           <div className="flex flex-col sm:flex-row items-center sm:items-start gap-5 text-center sm:text-left">

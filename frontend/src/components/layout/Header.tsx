@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Sun, Moon, Bell, Sparkles, AlertTriangle, ShieldCheck, Mail, ChevronRight, RefreshCw, Send, CheckCircle2 } from 'lucide-react';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -34,6 +34,8 @@ export const Header: React.FC<HeaderProps> = ({ onOpenAI }) => {
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(false);
 
+  const notificationRef = useRef<HTMLDivElement>(null);
+
   const title = PAGE_TITLES[location.pathname] || 'Dashboard';
 
   const fetchData = async () => {
@@ -60,6 +62,29 @@ export const Header: React.FC<HeaderProps> = ({ onOpenAI }) => {
   useEffect(() => {
     fetchData();
   }, [location.pathname]);
+
+  // Click-Outside & Escape Key dismissal for Notifications Dropdown
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (notificationRef.current && !notificationRef.current.contains(event.target as Node)) {
+        setShowNotifications(false);
+      }
+    };
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setShowNotifications(false);
+      }
+    };
+
+    if (showNotifications) {
+      document.addEventListener('mousedown', handleClickOutside);
+      document.addEventListener('keydown', handleKeyDown);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [showNotifications]);
 
   const handleMarkAllRead = () => {
     setUnreadCount(0);
@@ -109,7 +134,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenAI }) => {
         </motion.button>
 
         {/* Notifications */}
-        <div className="relative">
+        <div ref={notificationRef} className="relative">
           <motion.button
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
