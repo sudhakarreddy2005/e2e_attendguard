@@ -135,6 +135,7 @@ export const DetectPage: React.FC = () => {
         section: matchStudent.section || section,
         remarks: remarkText,
         confidence: matchStudent.confidence,
+        captured_image: inputImagePreview || undefined,
       });
       setLoggedRollNos((prev) => ({ ...prev, [matchStudent.roll_no]: true }));
     } catch (err) {

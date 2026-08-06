@@ -688,7 +688,6 @@ export const ViolationsPage: React.FC = () => {
               <thead>
                 <tr className="border-b border-black/10 dark:border-white/10 bg-white/50 dark:bg-white/[0.04] text-[11px] font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300">
                   <th className="py-4 px-4.5">Student</th>
-                  <th className="py-4 px-4.5">Incident Snapshot</th>
                   <th className="py-4 px-4.5">Violation Category</th>
                   <th className="py-4 px-4.5">Zone Location</th>
                   <th className="py-4 px-4.5">Timestamp</th>
@@ -698,18 +697,17 @@ export const ViolationsPage: React.FC = () => {
               </thead>
               <tbody className="divide-y divide-black/5 dark:divide-white/10 text-xs">
                 {isLoading ? (
-                  Array.from({ length: 5 }).map((_, i) => <SkeletonTableRow key={i} columns={7} />)
+                  Array.from({ length: 5 }).map((_, i) => <SkeletonTableRow key={i} columns={6} />)
                 ) : yieldedViolations.length === 0 ? (
                   <tr>
-                    <td colSpan={7}>
+                    <td colSpan={6}>
                       <EmptyState icon={ShieldAlert} title="No incidents found" subtitle="No incident records match your selected filter criteria." />
                     </td>
                   </tr>
                 ) : (
                   yieldedViolations.map((v, index) => {
                     const statusStyle = STATUS_BADGE_STYLES[v.status] || 'bg-slate-500/15 text-slate-400 border-slate-500/30';
-                    const enrolledAvatar = studentService.getStudentImage(v.roll_no);
-                    const incidentSnapshot = v.captured_image && v.captured_image.trim().length > 0 ? v.captured_image : null;
+                    const studentAvatar = studentService.getStudentImage(v.roll_no);
 
                     return (
                       <motion.tr
@@ -720,19 +718,19 @@ export const ViolationsPage: React.FC = () => {
                         onClick={() => setSelectedIncident(v)}
                         className="table-row-hover even:bg-white/35 dark:even:bg-white/[0.02] cursor-pointer"
                       >
-                        {/* Student Name, Roll No & DB Profile Photo */}
+                        {/* Student Name, Roll No & Enrolled DB Profile Photo */}
                         <td className="py-3 px-4.5">
                           <div className="flex items-center gap-3">
                             <div
                               onClick={(e) => {
                                 e.stopPropagation();
-                                setPreviewModal({ url: enrolledAvatar, title: `${v.student_name || v.roll_no} — Enrolled DB Photo` });
+                                setPreviewModal({ url: studentAvatar, title: `${v.student_name || v.roll_no} — Enrolled DB Photo` });
                               }}
                               className="w-9 h-9 rounded-full overflow-hidden border border-black/10 dark:border-white/20 shadow-sm shrink-0 bg-slate-200 dark:bg-slate-800 cursor-pointer hover:scale-110 transition-transform relative group"
                               title="Click to preview Enrolled DB Photo"
                             >
                               <img
-                                src={enrolledAvatar}
+                                src={studentAvatar}
                                 alt={v.student_name || v.roll_no}
                                 className="w-full h-full object-cover"
                                 onError={(e) => {
@@ -745,34 +743,6 @@ export const ViolationsPage: React.FC = () => {
                               <div className="text-[11px] font-mono text-[#007AFF] font-extrabold">{v.roll_no}</div>
                             </div>
                           </div>
-                        </td>
-
-                        {/* Incident Snapshot Column */}
-                        <td className="py-3 px-4.5">
-                          {incidentSnapshot ? (
-                            <div
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setPreviewModal({ url: incidentSnapshot, title: `Incident Snapshot — ${v.student_name || v.roll_no}` });
-                              }}
-                              className="w-10 h-10 rounded-xl overflow-hidden border border-white/80 dark:border-white/20 shadow-sm bg-slate-200 dark:bg-slate-800 cursor-pointer hover:scale-105 hover:ring-2 hover:ring-[#007AFF] transition-all relative group"
-                              title="Click to preview Incident Camera Photo"
-                            >
-                              <img
-                                src={incidentSnapshot}
-                                alt="Incident Snapshot"
-                                className="w-full h-full object-cover"
-                              />
-                              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
-                                <Maximize2 className="w-3.5 h-3.5 text-white" />
-                              </div>
-                            </div>
-                          ) : (
-                            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-400 text-[10px] font-medium">
-                              <Camera className="w-3 h-3 text-slate-400 shrink-0" />
-                              <span>No Camera Snapshot</span>
-                            </div>
-                          )}
                         </td>
 
                         {/* Category */}
