@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import {
-  Compass,
   LayoutDashboard,
   Users,
   Scan,
@@ -40,7 +39,6 @@ export const Sidebar: React.FC<SidebarProps> = () => {
   };
 
   const allNavItems = [
-    { label: 'Overview', path: '/home', icon: Compass, permission: 'dashboard.view' },
     { label: 'Dashboard', path: '/dashboard', icon: LayoutDashboard, permission: 'dashboard.view' },
     { label: 'Students', path: '/students', icon: Users, permission: 'students.view' },
     { label: 'Recognition', path: '/detect', icon: Scan, permission: 'recognition.view' },

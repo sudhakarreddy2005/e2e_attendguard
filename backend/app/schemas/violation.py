@@ -4,10 +4,14 @@ from typing import Optional
 
 from pydantic import BaseModel, Field
 
-ALLOWED_VIOLATION_TYPES = {"Late Arrival", "Dress Code", "Bunk"}
+ALLOWED_VIOLATION_TYPES = {
+    "Late Arrival", "Dress Code", "Bunk", "Bunking Class",
+    "No ID Card", "Unauthorized Access",
+}
 ALLOWED_LOCATIONS = {
     "A Block", "B Block", "C Block", "D Block",
-    "U Block", "Central Block", "Playground",
+    "U Block", "Central Block", "Playground", "Main Gate",
+    "OAT", "OAT (Open Air Theatre)",
 }
 ALLOWED_STATUSES = {
     "Pending", "Reviewed", "Resolved", "Escalated",

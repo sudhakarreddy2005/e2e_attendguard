@@ -1,11 +1,13 @@
 import React, { useRef, useState, useEffect } from 'react';
-import { Camera, Scan, CheckCircle2, RefreshCw, Upload, Image as ImageIcon, Sparkles, VideoOff, Check, AlertTriangle, Users, ShieldCheck, X, RotateCcw } from 'lucide-react';
+import { Camera, Scan, CheckCircle2, RefreshCw, Upload, Image as ImageIcon, Sparkles, VideoOff, Check, AlertTriangle, Users, ShieldCheck, X, RotateCcw, ZoomIn } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { detectionService } from '../services/detectionService';
 import { violationService } from '../services/violationService';
 import { studentService } from '../services/studentService';
 import { DetectionResult, FaceMatch } from '../types/detection';
 import { Badge } from '../components/ui/Badge';
 import { PageTransition } from '../components/ui/PageTransition';
+import { SMOOTH_SPRING, EXPO_OUT, blurFadeInUp, scrollSlideLeft, scrollSlideRight, staggerDirectional } from '../utils/motion-variants';
 
 export const DetectPage: React.FC = () => {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -16,10 +18,14 @@ export const DetectPage: React.FC = () => {
   const [isCameraActive, setIsCameraActive] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [result, setResult] = useState<DetectionResult | null>(null);
+  const [errorToast, setErrorToast] = useState<string | null>(null);
 
   // Track violation logging status per student roll_no
   const [loggedRollNos, setLoggedRollNos] = useState<Record<string, boolean>>({});
   const [loggingRollNo, setLoggingRollNo] = useState<string | null>(null);
+
+  // Big Image Lightbox Modal State
+  const [previewModal, setPreviewModal] = useState<{ url: string; title: string } | null>(null);
 
   // Parameters (Default to ALL for max detection flexibility)
   const [department, setDepartment] = useState('ALL');
@@ -49,7 +55,7 @@ export const DetectPage: React.FC = () => {
       }
     } catch (err) {
       console.error('Camera access error:', err);
-      alert('Unable to access webcam.');
+      setErrorToast('Unable to access webcam. Please check browser permissions.');
     }
   };
 
@@ -108,7 +114,7 @@ export const DetectPage: React.FC = () => {
       setResult(data);
     } catch (err: any) {
       console.error('Detection error:', err);
-      alert('Recognition request failed: ' + (err.response?.data?.detail || err.message));
+      setErrorToast('Recognition request failed: ' + (err.response?.data?.detail || err.message));
     } finally {
       setIsProcessing(false);
     }
@@ -133,7 +139,7 @@ export const DetectPage: React.FC = () => {
       setLoggedRollNos((prev) => ({ ...prev, [matchStudent.roll_no]: true }));
     } catch (err) {
       console.error('Failed to log violation:', err);
-      alert(`Failed to log violation for ${matchStudent.name}`);
+      setErrorToast(`Failed to log violation for ${matchStudent.name}`);
     } finally {
       setLoggingRollNo(null);
     }
@@ -150,7 +156,7 @@ export const DetectPage: React.FC = () => {
 
   const handleFileUpload = (file: File) => {
     if (!file.type.startsWith('image/')) {
-      alert('Please upload a valid image file (PNG, JPG, JPEG, WEBP, HEIF).');
+      setErrorToast('Please upload a valid image file (PNG, JPG, JPEG, WEBP, HEIF).');
       return;
     }
     setUploadedFile(file);
@@ -189,6 +195,17 @@ export const DetectPage: React.FC = () => {
 
   return (
     <PageTransition className="space-y-6">
+      {/* Error Toast */}
+      {errorToast && (
+        <div className="flex items-center justify-between gap-3 px-4 py-2.5 rounded-2xl bg-[#FF453A]/15 border border-[#FF453A]/30 text-[#FF453A] text-xs font-semibold shadow-xs animate-in fade-in">
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+            <span>{errorToast}</span>
+          </div>
+          <button onClick={() => setErrorToast(null)} className="text-[10px] font-bold underline cursor-pointer hover:text-[#FF453A]/80">Dismiss</button>
+        </div>
+      )}
+
       {/* Header Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
@@ -233,15 +250,15 @@ export const DetectPage: React.FC = () => {
         <div className="lg:col-span-2 space-y-4">
           {activeTab === 'camera' ? (
             /* Live Camera Feed */
-            <div className="relative rounded-[28px] overflow-hidden bg-slate-950 border border-white/20 dark:border-white/10 shadow-2xl aspect-video flex items-center justify-center">
+            <div className="relative rounded-[24px] overflow-hidden bg-slate-900 border border-slate-200 dark:border-white/10 shadow-xl h-64 sm:h-80 flex items-center justify-center">
               <video ref={videoRef} autoPlay playsInline muted className={`w-full h-full object-cover ${!isCameraActive ? 'hidden' : ''}`} />
               <canvas ref={canvasRef} className="hidden" />
 
               {!isCameraActive && (
-                <div className="flex flex-col items-center space-y-3 text-slate-400 p-6 text-center">
-                  <VideoOff className="w-12 h-12 stroke-1 text-slate-500" />
+                <div className="flex flex-col items-center space-y-2 text-slate-400 p-4 text-center">
+                  <VideoOff className="w-10 h-10 stroke-1 text-slate-500" />
                   <p className="text-xs font-semibold">Webcam is currently OFF</p>
-                  <button onClick={startCamera} className="apple-btn-primary px-5 py-2.5 text-xs font-bold shadow-md flex items-center gap-2">
+                  <button onClick={startCamera} className="apple-btn-primary px-4 py-2 text-xs font-bold shadow-md flex items-center gap-2">
                     <Camera className="w-4 h-4" /> Turn On Camera
                   </button>
                 </div>
@@ -260,28 +277,28 @@ export const DetectPage: React.FC = () => {
 
               {/* Live Indicator */}
               {isCameraActive && (
-                <div className="absolute top-4 left-4 flex items-center gap-2 px-3 py-1.5 rounded-full bg-black/50 backdrop-blur-md border border-white/20">
+                <div className="absolute top-3 left-3 flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-black/50 backdrop-blur-md border border-white/20">
                   <span className="w-2 h-2 rounded-full bg-[#FF453A] animate-pulse" />
                   <span className="text-[10px] font-bold text-white uppercase tracking-wider">Live Feed</span>
                 </div>
               )}
 
-              {/* Action Buttons: Run Recognition, Clear Match & Turn Off Camera Aligned Side-by-Side */}
+              {/* Action Buttons */}
               {isCameraActive && (
-                <div className="absolute bottom-5 left-1/2 -translate-x-1/2 z-10 flex items-center gap-3">
+                <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-10 flex flex-wrap items-center justify-center gap-2 w-full px-3">
                   <div className={isProcessing ? '' : 'pulse-ring-wrap'}>
                     <button
                       onClick={captureFrame}
                       disabled={isProcessing}
-                      className="apple-btn-primary flex items-center gap-2.5 px-5 py-2.5 text-xs font-bold shadow-xl disabled:opacity-40"
+                      className="apple-btn-primary flex items-center gap-2 px-4 py-2 text-xs font-bold shadow-xl disabled:opacity-40"
                     >
                       {isProcessing ? (
                         <>
-                          <RefreshCw className="w-4 h-4 animate-spin" strokeWidth={2} /> Matching Vectors...
+                          <RefreshCw className="w-3.5 h-3.5 animate-spin" strokeWidth={2} /> Matching...
                         </>
                       ) : (
                         <>
-                          <Scan className="w-4 h-4" strokeWidth={2} /> Run Face Recognition
+                          <Scan className="w-3.5 h-3.5" strokeWidth={2} /> Run Recognition
                         </>
                       )}
                     </button>
@@ -290,35 +307,35 @@ export const DetectPage: React.FC = () => {
                   {result && (
                     <button
                       onClick={handleCancelMatch}
-                      className="flex items-center gap-1.5 px-4 py-2.5 rounded-2xl bg-black/60 hover:bg-rose-600/90 text-white text-xs font-bold backdrop-blur-md shadow-lg transition-all border border-white/20 cursor-pointer"
-                      title="Clear current match result and prepare for next scan"
+                      className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-black/60 hover:bg-rose-600/90 text-white text-xs font-bold backdrop-blur-md shadow-lg transition-all border border-white/20 cursor-pointer"
+                      title="Clear current match result"
                     >
-                      <RotateCcw className="w-3.5 h-3.5" strokeWidth={2.5} /> Clear Match
+                      <RotateCcw className="w-3.5 h-3.5" strokeWidth={2.5} /> Clear
                     </button>
                   )}
 
                   <button
                     onClick={stopCamera}
-                    className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-[#FF453A] hover:bg-[#E0382F] text-white text-xs font-bold shadow-lg shadow-[#FF453A]/20 transition-all border border-white/20 cursor-pointer"
+                    className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[#FF453A] hover:bg-[#E0382F] text-white text-xs font-bold shadow-lg shadow-[#FF453A]/20 transition-all border border-white/20 cursor-pointer"
                   >
-                    <VideoOff className="w-4 h-4" strokeWidth={2} /> Turn Off Camera
+                    <VideoOff className="w-3.5 h-3.5" strokeWidth={2} /> Stop
                   </button>
                 </div>
               )}
             </div>
           ) : (
-            /* Drag and Drop Image Recognition Zone */
-            <div className="glass-panel p-6 rounded-[28px] shadow-xl space-y-4 border border-white/60 dark:border-white/10">
+            /* Drag and Drop Image Recognition Zone - Clean Glass Panel Layout */
+            <div className="glass-panel bg-white/70 dark:bg-slate-900/40 border border-slate-200 dark:border-white/10 shadow-xl rounded-[24px] p-5 flex flex-col items-center justify-between min-h-[300px] text-center">
               <div
                 onDragEnter={handleDrag}
                 onDragLeave={handleDrag}
                 onDragOver={handleDrag}
                 onDrop={handleDrop}
                 onClick={() => fileInputRef.current?.click()}
-                className={`border-2 border-dashed rounded-[22px] p-8 text-center cursor-pointer transition-all ${
+                className={`w-full flex-1 flex flex-col items-center justify-center border-2 border-dashed rounded-[20px] p-6 text-center cursor-pointer transition-all ${
                   dragActive
                     ? 'border-[#007AFF] bg-[#007AFF]/10'
-                    : 'border-slate-300 dark:border-white/20 hover:border-[#007AFF]/60 bg-white/40 dark:bg-white/5'
+                    : 'border-slate-300 dark:border-white/20 hover:border-[#007AFF]/60 bg-white/50 dark:bg-white/5'
                 }`}
               >
                 <input
@@ -330,68 +347,107 @@ export const DetectPage: React.FC = () => {
                 />
 
                 {uploadedFile ? (
-                  <div className="space-y-2 py-4">
-                    <Check className="w-9 h-9 mx-auto text-[#30D158]" strokeWidth={2.5} />
-                    <h3 className="text-sm font-bold text-slate-700 dark:text-slate-200">
-                      Selected: {uploadedFile.name}
+                  <div className="space-y-2 relative">
+                    <div className="w-12 h-12 mx-auto rounded-full bg-[#30D158]/15 flex items-center justify-center border border-[#30D158]/30 animate-pulse">
+                      <Check className="w-6 h-6 text-[#30D158]" strokeWidth={2.5} />
+                    </div>
+                    <h3 className="text-xs font-bold text-slate-700 dark:text-slate-200 truncate max-w-xs mx-auto">
+                      {uploadedFile.name}
                     </h3>
-                    <p className="text-xs text-slate-500">
-                      ({(uploadedFile.size / 1024 < 1024 ? `${Math.round(uploadedFile.size / 1024)} KB` : `${(uploadedFile.size / 1048576).toFixed(1)} MB`)})
+                    <p className="text-[11px] font-mono text-slate-400">
+                      {(uploadedFile.size / 1024 < 1024 ? `${Math.round(uploadedFile.size / 1024)} KB` : `${(uploadedFile.size / 1048576).toFixed(1)} MB`)}
                     </p>
-                    <span className="text-[11px] text-[#007AFF] font-semibold underline block pt-1">
-                      Click or drop another file to replace
+                    <span className="text-[10px] text-[#007AFF] font-semibold block pt-0.5">
+                      Click or drop another photo to change
                     </span>
                   </div>
                 ) : (
-                  <div className="space-y-2 py-6">
-                    <Upload className="w-10 h-10 mx-auto text-[#007AFF] animate-bounce" strokeWidth={2} />
-                    <h3 className="text-sm font-bold text-slate-700 dark:text-slate-200">
+                  <div className="space-y-2">
+                    <div className="w-12 h-12 mx-auto rounded-full bg-[#007AFF]/10 flex items-center justify-center border border-[#007AFF]/20">
+                      <Upload className="w-6 h-6 text-[#007AFF] animate-bounce" strokeWidth={2} />
+                    </div>
+                    <h3 className="text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-200">
                       Drag & Drop Photo for Multi-Face Recognition
                     </h3>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">
-                      Supports PNG, JPG, JPEG, WEBP, HEIF (Detects multiple faces in single image)
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400 max-w-xs mx-auto">
+                      Supports PNG, JPG, JPEG, WEBP, HEIF
                     </p>
-                    <button type="button" className="apple-btn-secondary px-4 py-2 text-xs font-semibold mt-2">
-                      Browse File
-                    </button>
                   </div>
                 )}
               </div>
 
-              {/* Upload Recognition Button & Handy Clear Button */}
+              {/* Primary Action Button */}
               {uploadedFile && (
-                <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
+                <div className="pt-4 w-full flex justify-center">
                   <button
                     onClick={runUploadRecognition}
                     disabled={isProcessing}
-                    className="apple-btn-primary flex items-center gap-2.5 px-6 py-3 text-xs font-bold shadow-lg disabled:opacity-50 cursor-pointer"
+                    className="apple-btn-primary flex items-center gap-2 px-6 py-2.5 text-xs font-bold shadow-lg disabled:opacity-50 cursor-pointer"
                   >
                     {isProcessing ? (
                       <>
-                        <RefreshCw className="w-4 h-4 animate-spin" strokeWidth={2} /> Matching All Vectors in DB...
+                        <RefreshCw className="w-3.5 h-3.5 animate-spin" strokeWidth={2} /> Analyzing Multi-Face Vectors...
                       </>
                     ) : (
                       <>
-                        <Sparkles className="w-4 h-4 text-white" strokeWidth={2} /> Match All Faces in Database
+                        <Sparkles className="w-3.5 h-3.5 text-white" strokeWidth={2} /> Run Multi-Face Recognition
                       </>
                     )}
-                  </button>
-
-                  <button
-                    onClick={handleCancelMatch}
-                    className="px-4 py-3 rounded-2xl bg-slate-200 dark:bg-white/10 hover:bg-rose-500/20 text-slate-700 dark:text-slate-200 hover:text-rose-600 dark:hover:text-rose-400 text-xs font-bold transition-all border border-slate-300/80 dark:border-white/10 flex items-center gap-1.5 cursor-pointer shadow-xs"
-                    title="Clear uploaded image and reset"
-                  >
-                    <RotateCcw className="w-4 h-4" strokeWidth={2} /> Clear / Reset
                   </button>
                 </div>
               )}
             </div>
           )}
 
-          {/* Multi-Student Verification Panel (Supports 1 or Multiple People in Pic) */}
+          {/* ── Detection Stats: Faces Detected vs Recognized ── */}
+          <AnimatePresence>
+            {result && (
+              <motion.div
+                initial={{ opacity: 0, y: 12, filter: 'blur(6px)' }}
+                animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+                exit={{ opacity: 0, y: -8 }}
+                transition={{ duration: 0.4, ease: EXPO_OUT }}
+                className="flex items-center gap-2 flex-wrap"
+              >
+                <div className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-2xl bg-[#007AFF]/10 border border-[#007AFF]/25 text-xs font-bold text-[#007AFF]">
+                  <Scan className="w-3.5 h-3.5" />
+                  <span className="text-sm font-black">{result.faces_detected}</span>
+                  <span>Detected</span>
+                </div>
+                <div className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-2xl border text-xs font-bold ${
+                  matchedList.length > 0
+                    ? 'bg-[#30D158]/10 border-[#30D158]/25 text-[#30D158]'
+                    : 'bg-amber-500/10 border-amber-500/25 text-amber-500'
+                }`}>
+                  <Users className="w-3.5 h-3.5" />
+                  <span className="text-sm font-black">{matchedList.length}</span>
+                  <span>Recognized</span>
+                </div>
+                {result.faces_detected > matchedList.length && (
+                  <div className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-2xl bg-slate-200/60 dark:bg-white/10 border border-slate-300/50 dark:border-white/10 text-xs font-bold text-slate-500 dark:text-slate-400">
+                    <AlertTriangle className="w-3.5 h-3.5" />
+                    <span className="text-sm font-black">{result.faces_detected - matchedList.length}</span>
+                    <span>Unmatched</span>
+                  </div>
+                )}
+                {result.total_ms && (
+                  <span className="text-[10px] font-mono text-slate-400 ml-auto">
+                    {result.detection_ms}ms detect • {result.recognition_ms}ms match
+                  </span>
+                )}
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Multi-Student Verification Panel */}
+          <AnimatePresence>
           {result && matchedList.length > 0 && (
-            <div className="glass-panel p-6 rounded-[28px] shadow-xl border border-[#30D158]/30 bg-[#30D158]/5 space-y-6">
+            <motion.div
+              initial={{ opacity: 0, x: -60, filter: 'blur(8px)' }}
+              animate={{ opacity: 1, x: 0, filter: 'blur(0px)' }}
+              exit={{ opacity: 0, x: -30 }}
+              transition={{ duration: 0.55, ease: EXPO_OUT, delay: 0.1 }}
+              className="glass-panel p-6 rounded-[28px] shadow-xl border border-[#30D158]/30 bg-[#30D158]/5 space-y-6">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#30D158]/20 pb-4">
                 <div>
                   <h3 className="font-bold text-slate-700 dark:text-slate-200 text-base flex items-center gap-2">
@@ -409,15 +465,14 @@ export const DetectPage: React.FC = () => {
                       onClick={handleConfirmAllViolations}
                       className="apple-btn-primary px-4 py-2 text-xs font-bold flex items-center gap-1.5 shadow-md"
                     >
-                      <ShieldCheck className="w-4 h-4 text-white" /> Confirm All ({matchedList.length}) Violations
+                      <ShieldCheck className="w-4 h-4 text-white" /> Confirm All ({matchedList.length})
                     </button>
                   )}
                   <button
                     onClick={handleCancelMatch}
-                    className="px-3.5 py-2 rounded-2xl bg-slate-200 dark:bg-white/10 hover:bg-rose-500/15 hover:text-rose-500 text-slate-600 dark:text-slate-300 text-xs font-bold transition-all border border-slate-300 dark:border-white/10 flex items-center gap-1.5 cursor-pointer"
-                    title="Cancel / Reset Match Result"
+                    className="px-3.5 py-2 rounded-2xl bg-slate-200/80 dark:bg-white/10 hover:bg-slate-300 dark:hover:bg-white/20 text-slate-700 dark:text-slate-200 text-xs font-bold transition-all border border-slate-300 dark:border-white/10 flex items-center gap-1.5 cursor-pointer"
                   >
-                    <X className="w-4 h-4" /> Cancel / Reset
+                    <RotateCcw className="w-3.5 h-3.5" /> Reset Scan
                   </button>
                 </div>
               </div>
@@ -438,38 +493,50 @@ export const DetectPage: React.FC = () => {
                       </Badge>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       {/* Captured / Uploaded Input Image */}
-                      <div className="flex flex-col items-center space-y-2 p-3 rounded-2xl bg-white/70 dark:bg-white/5 border border-slate-200 dark:border-white/10">
-                        <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                          Uploaded Input Photo
+                      <div className="flex flex-col items-center space-y-2 p-3.5 rounded-2xl bg-white/80 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-center">
+                        <span className="text-xs font-bold text-slate-600 dark:text-slate-300">
+                          Incident Photo
                         </span>
-                        <div className="w-32 h-32 rounded-2xl overflow-hidden bg-slate-900 border-2 border-white/80 dark:border-white/20 shadow-md">
+                        <div
+                          onClick={() => inputImagePreview && setPreviewModal({ url: inputImagePreview, title: `Incident Photo - Student #${idx + 1}` })}
+                          className="relative group w-28 h-28 sm:w-32 sm:h-32 rounded-2xl overflow-hidden bg-slate-900 border-2 border-white/80 dark:border-white/20 shadow-md cursor-pointer"
+                        >
                           {inputImagePreview ? (
-                            <img src={inputImagePreview} alt="Captured Input" className="w-full h-full object-cover" />
+                            <>
+                              <img src={inputImagePreview} alt="Incident Photo" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-[11px] font-bold gap-1">
+                                <ZoomIn className="w-4 h-4" /> Expand
+                              </div>
+                            </>
                           ) : (
-                            <div className="w-full h-full flex items-center justify-center text-[10px] text-slate-400">Input Image</div>
+                            <div className="w-full h-full flex items-center justify-center text-[10px] text-slate-400">Incident Photo</div>
                           )}
                         </div>
-                        <span className="text-[10px] font-semibold text-slate-400">Incident Snapshot</span>
                       </div>
 
                       {/* Database Enrolled Image for this specific student */}
-                      <div className="flex flex-col items-center space-y-2 p-3 rounded-2xl bg-white/70 dark:bg-white/5 border border-slate-200 dark:border-white/10">
-                        <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                          DB Enrolled Photo
+                      <div className="flex flex-col items-center space-y-2 p-3.5 rounded-2xl bg-white/80 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-center">
+                        <span className="text-xs font-bold text-[#30D158]">
+                          Enrolled DB Photo
                         </span>
-                        <div className="w-32 h-32 rounded-full overflow-hidden bg-slate-900 border-4 border-[#30D158]/60 shadow-md ring-4 ring-[#30D158]/20">
+                        <div
+                          onClick={() => setPreviewModal({ url: studentService.getStudentImage(st.roll_no), title: `${st.name} (${st.roll_no}) - DB Profile` })}
+                          className="relative group w-28 h-28 sm:w-32 sm:h-32 rounded-full overflow-hidden bg-slate-900 border-4 border-[#30D158]/60 shadow-md ring-4 ring-[#30D158]/20 cursor-pointer"
+                        >
                           <img
                             src={studentService.getStudentImage(st.roll_no)}
                             alt={st.name}
-                            className="w-full h-full object-cover"
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                             onError={(e) => {
                               e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(st.name)}&background=30D158&color=fff`;
                             }}
                           />
+                          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-[11px] font-bold gap-1">
+                            <ZoomIn className="w-4 h-4" /> Expand
+                          </div>
                         </div>
-                        <span className="text-[10px] font-bold text-[#30D158]">Training Profile</span>
                       </div>
                     </div>
 
@@ -513,50 +580,19 @@ export const DetectPage: React.FC = () => {
                   </div>
                 ))}
               </div>
-            </div>
+            </motion.div>
           )}
+          </AnimatePresence>
         </div>
 
-        {/* Sidebar Parameters & Multi-Match Recognition Result */}
-        <div className="space-y-4">
+        <motion.div
+          className="space-y-4"
+          initial={{ opacity: 0, x: 60, filter: 'blur(8px)' }}
+          animate={{ opacity: 1, x: 0, filter: 'blur(0px)' }}
+          transition={{ duration: 0.55, ease: EXPO_OUT, delay: 0.15 }}
+        >
           <div className="glass-panel p-6 rounded-[24px] shadow-lg space-y-3.5 text-xs">
             <h3 className="font-bold text-slate-700 dark:text-slate-200 text-sm">Scan Parameters</h3>
-            <div className="grid grid-cols-2 gap-2.5">
-              <div>
-                <label className="block text-slate-500 dark:text-slate-400 font-semibold mb-1">Dept</label>
-                <select
-                  value={department}
-                  onChange={(e) => setDepartment(e.target.value)}
-                  className="w-full px-3 py-2 rounded-2xl bg-black/5 dark:bg-white/10 border border-white/20 dark:border-white/10 text-slate-700 dark:text-slate-200 font-semibold"
-                >
-                  <option value="ALL">All Depts</option>
-                  <option value="CSE">CSE</option>
-                  <option value="ECE">ECE</option>
-                  <option value="EEE">EEE</option>
-                  <option value="MECH">MECH</option>
-                  <option value="CIVIL">CIVIL</option>
-                  <option value="IT">IT</option>
-                  <option value="CIC">CIC</option>
-                  <option value="CSO">CSO</option>
-                  <option value="CSM">CSM</option>
-                  <option value="AIDS">AIDS</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-slate-500 dark:text-slate-400 font-semibold mb-1">Section</label>
-                <select
-                  value={section}
-                  onChange={(e) => setSection(e.target.value)}
-                  className="w-full px-3 py-2 rounded-2xl bg-black/5 dark:bg-white/10 border border-white/20 dark:border-white/10 text-slate-700 dark:text-slate-200 font-semibold"
-                >
-                  <option value="ALL">All Sections</option>
-                  <option value="A">Section A</option>
-                  <option value="B">Section B</option>
-                  <option value="C">Section C</option>
-                  <option value="D">Section D</option>
-                </select>
-              </div>
-            </div>
             <div>
               <label className="block text-slate-500 dark:text-slate-400 font-semibold mb-1">Location</label>
               <select
@@ -731,15 +767,61 @@ export const DetectPage: React.FC = () => {
                 </div>
               )}
 
-              {result.total_ms && (
-                <div className="text-[10px] font-mono text-slate-400 pt-1">
-                  Detected {result.faces_detected} face(s) • {result.detection_ms}ms detect • {result.recognition_ms}ms match
-                </div>
-              )}
+
             </div>
           )}
-        </div>
+        </motion.div>
       </div>
+
+      {/* ── High-Resolution Image Preview Lightbox Modal ── */}
+      <AnimatePresence>
+        {previewModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setPreviewModal(null)}
+            className="fixed inset-0 z-50 bg-black/80 backdrop-blur-xl flex items-center justify-center p-4 cursor-zoom-out animate-in fade-in"
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0, y: 15 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.9, opacity: 0, y: 15 }}
+              transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+              onClick={(e) => e.stopPropagation()}
+              className="relative max-w-2xl w-full bg-slate-900/90 border border-white/20 rounded-[28px] p-5 shadow-2xl overflow-hidden cursor-default space-y-4"
+            >
+              <div className="flex items-center justify-between border-b border-white/10 pb-3">
+                <div className="flex items-center gap-2">
+                  <ImageIcon className="w-5 h-5 text-[#007AFF]" />
+                  <h3 className="text-sm font-bold text-white truncate max-w-md">{previewModal.title}</h3>
+                </div>
+                <button
+                  onClick={() => setPreviewModal(null)}
+                  className="p-1.5 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors cursor-pointer"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="relative rounded-2xl overflow-hidden bg-black flex items-center justify-center max-h-[70vh] border border-white/10">
+                <img
+                  src={previewModal.url}
+                  alt={previewModal.title}
+                  className="w-full h-full object-contain max-h-[70vh]"
+                />
+              </div>
+
+              <div className="flex items-center justify-between text-xs text-slate-400 font-medium pt-1">
+                <span>Click outside or Press ESC to close</span>
+                <span className="text-[#30D158] font-bold flex items-center gap-1">
+                  <ZoomIn className="w-3.5 h-3.5" /> High Precision Biometric View
+                </span>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </PageTransition>
   );
 };

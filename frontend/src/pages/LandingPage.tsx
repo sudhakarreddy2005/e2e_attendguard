@@ -42,6 +42,12 @@ import {
   blurFadeInUp,
   scaleIn,
   clipPathReveal,
+  scrollSlideLeft,
+  scrollSlideRight,
+  headingReveal,
+  staggerDirectional,
+  itemSlideLeft,
+  itemSlideRight,
 } from '../utils/motion-variants';
 
 export const LandingPage: React.FC = () => {
@@ -644,15 +650,22 @@ export const LandingPage: React.FC = () => {
       {/* ═══════════════════════════════════════════════════════
          SECTION 5: CORE FEATURES BENTO GRID
          ═══════════════════════════════════════════════════════ */}
-      <section id="features" className="space-y-4 scroll-mt-28">
-        <div className="text-center max-w-lg mx-auto space-y-0.5">
+      <motion.section
+        id="features"
+        className="space-y-4 scroll-mt-28"
+        variants={scrollSlideLeft}
+        initial="hidden"
+        whileInView="visible"
+        viewport={{ once: true, margin: '-15% 0px' }}
+      >
+        <motion.div variants={headingReveal} initial="hidden" whileInView="visible" viewport={{ once: true }} className="text-center max-w-lg mx-auto space-y-0.5">
           <h2 className="text-xl font-bold text-slate-900 dark:text-white">Core Intelligence Modules</h2>
           <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">Modular bento architecture for campus security management.</p>
-        </div>
+        </motion.div>
 
-        <motion.div variants={staggerContainer(0.05)} initial="hidden" whileInView="visible" viewport={{ once: true, margin: '-8% 0px' }} className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
+        <motion.div variants={staggerDirectional(0.12)} initial="hidden" whileInView="visible" viewport={{ once: true, margin: '-10% 0px' }} className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
           <motion.div
-            variants={blurFadeInUp}
+            variants={itemSlideLeft}
             whileHover={{ y: -4, scale: 1.005 }}
             transition={SMOOTH_SPRING}
             onClick={handleActionClick}
@@ -680,7 +693,7 @@ export const LandingPage: React.FC = () => {
           </motion.div>
 
           <motion.div
-            variants={blurFadeInUp}
+            variants={itemSlideRight}
             whileHover={{ y: -4, scale: 1.005 }}
             transition={SMOOTH_SPRING}
             onClick={handleActionClick}
@@ -704,21 +717,29 @@ export const LandingPage: React.FC = () => {
             </div>
           </motion.div>
         </motion.div>
-      </section>
+      </motion.section>
+      
 
       {/* ═══════════════════════════════════════════════════════
          SECTION 6: LEVEL-WISE EMAIL ESCALATION WORKFLOW
          ═══════════════════════════════════════════════════════ */}
-      <section id="workflow" className="space-y-4 scroll-mt-28">
-        <div className="text-center max-w-lg mx-auto space-y-0.5">
+      <motion.section
+        id="workflow"
+        className="space-y-4 scroll-mt-28"
+        variants={scrollSlideRight}
+        initial="hidden"
+        whileInView="visible"
+        viewport={{ once: true, margin: '-15% 0px' }}
+      >
+        <motion.div variants={headingReveal} initial="hidden" whileInView="visible" viewport={{ once: true }} className="text-center max-w-lg mx-auto space-y-0.5">
           <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-[#FF9F0A]">Automated Disciplinary Workflow</span>
           <h2 className="text-xl font-bold text-slate-900 dark:text-white flex items-center justify-center gap-1.5">
             <Mail className="w-4 h-4 text-[#FF9F0A]" /> Multi-Tier Level Email Escalation
           </h2>
           <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">Automated Microsoft Graph email dispatch based on cumulative student violation thresholds.</p>
-        </div>
+        </motion.div>
 
-        <motion.div variants={staggerContainer(0.05)} initial="hidden" whileInView="visible" viewport={{ once: true, margin: '-8% 0px' }} className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+        <motion.div variants={staggerDirectional(0.1, 0.15)} initial="hidden" whileInView="visible" viewport={{ once: true, margin: '-10% 0px' }} className="grid grid-cols-1 sm:grid-cols-4 gap-3">
           {[
             { level: 'Level 1', threshold: '5 Violations', title: 'Student Warning', desc: 'Direct advisory warning email dispatched to official student @vvit.net address.', target: 'Student', color: 'text-[#007AFF]', bg: 'bg-[#007AFF]/10 border-[#007AFF]/25' },
             { level: 'Level 2', threshold: '10 Violations', title: 'Faculty & HOD Escalation', desc: 'Formal escalation notice sent to Class Counsellor and Department HOD.', target: 'HOD + Counsellor', color: 'text-[#FF9F0A]', bg: 'bg-[#FF9F0A]/10 border-[#FF9F0A]/25' },
@@ -747,20 +768,27 @@ export const LandingPage: React.FC = () => {
             </motion.div>
           ))}
         </motion.div>
-      </section>
+      </motion.section>
 
       {/* ═══════════════════════════════════════════════════════
          SECTION 7: SECURITY & PRIVACY
          ═══════════════════════════════════════════════════════ */}
-      <section id="security" className="space-y-4 scroll-mt-28">
-        <div className="text-center max-w-lg mx-auto space-y-0.5">
+      <motion.section
+        id="security"
+        className="space-y-4 scroll-mt-28"
+        variants={scrollSlideLeft}
+        initial="hidden"
+        whileInView="visible"
+        viewport={{ once: true, margin: '-15% 0px' }}
+      >
+        <motion.div variants={headingReveal} initial="hidden" whileInView="visible" viewport={{ once: true }} className="text-center max-w-lg mx-auto space-y-0.5">
           <h2 className="text-xl font-bold text-slate-900 dark:text-white flex items-center justify-center gap-1.5">
             <Shield className="w-4 h-4 text-[#007AFF]" /> Institutional Security &amp; Access Control
           </h2>
           <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">Role authorization, session encryption, and Entra ID identity protection.</p>
-        </div>
+        </motion.div>
 
-        <motion.div variants={staggerContainer(0.05)} initial="hidden" whileInView="visible" viewport={{ once: true, margin: '-8% 0px' }} className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+        <motion.div variants={staggerDirectional(0.12)} initial="hidden" whileInView="visible" viewport={{ once: true, margin: '-10% 0px' }} className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
           <motion.div
             variants={blurFadeInUp}
             whileHover={{ y: -4, scale: 1.01 }}
@@ -794,25 +822,33 @@ export const LandingPage: React.FC = () => {
             <p className="text-[11px] text-slate-600 dark:text-slate-400 leading-relaxed">Verified institutional login enforcing @vvit.net domain identity verification.</p>
           </motion.div>
         </motion.div>
-      </section>
+      </motion.section>
 
       {/* ═══════════════════════════════════════════════════════
          SECTION 8: AI COPILOT QUERY AGENT
          ═══════════════════════════════════════════════════════ */}
-      <section id="copilot" ref={copilotRef} className="space-y-4 scroll-mt-28">
-        <div className="text-center max-w-lg mx-auto space-y-0.5">
+      <motion.section
+        id="copilot"
+        ref={copilotRef}
+        className="space-y-4 scroll-mt-28"
+        variants={scrollSlideRight}
+        initial="hidden"
+        whileInView="visible"
+        viewport={{ once: true, margin: '-15% 0px' }}
+      >
+        <motion.div variants={headingReveal} initial="hidden" whileInView="visible" viewport={{ once: true }} className="text-center max-w-lg mx-auto space-y-0.5">
           <h2 className="text-xl font-bold text-slate-900 dark:text-white flex items-center justify-center gap-1.5">
             <Sparkles className="w-4 h-4 text-[#BF5AF2]" /> AI Campus Copilot
           </h2>
-          <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">Natural language query agent for institutional intelligence.</p>
-        </div>
+          <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">10-stage stateful LangGraph agent with 11 enterprise tools for institutional intelligence.</p>
+        </motion.div>
 
         <motion.div
           variants={blurFadeInUp}
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true, margin: '-8% 0px' }}
-          whileHover={{ border-[#BF5AF2]/50, y: -2 }}
+          whileHover={{ borderColor: 'rgba(191,90,242,0.5)', y: -2 }}
           transition={SMOOTH_SPRING}
           className="rounded-xl bg-slate-900 dark:bg-slate-950 text-white p-5 space-y-3 border border-slate-800 dark:border-white/15 shadow-xl"
         >
@@ -847,16 +883,23 @@ export const LandingPage: React.FC = () => {
             )}
           </AnimatePresence>
         </motion.div>
-      </section>
+      </motion.section>
 
       {/* ═══════════════════════════════════════════════════════
      SECTION 9: COMPACT FAQ ACCORDION
          ═══════════════════════════════════════════════════════ */}
-      <section id="faq" className="glass-panel p-5 sm:p-6 rounded-xl border border-slate-200 dark:border-white/10 bg-white/80 dark:bg-slate-900/40 space-y-4 scroll-mt-28 shadow-xs max-w-3xl mx-auto">
-        <div className="text-center max-w-md mx-auto space-y-0.5">
+      <motion.section
+        id="faq"
+        className="glass-panel p-5 sm:p-6 rounded-xl border border-slate-200 dark:border-white/10 bg-white/80 dark:bg-slate-900/40 space-y-4 scroll-mt-28 shadow-xs max-w-3xl mx-auto"
+        variants={scrollSlideLeft}
+        initial="hidden"
+        whileInView="visible"
+        viewport={{ once: true, margin: '-15% 0px' }}
+      >
+        <motion.div variants={headingReveal} initial="hidden" whileInView="visible" viewport={{ once: true }} className="text-center max-w-md mx-auto space-y-0.5">
           <h3 className="text-lg font-bold text-slate-900 dark:text-white">Frequently Asked Questions</h3>
           <p className="text-[11px] text-slate-500 dark:text-slate-400">Answers regarding biometrics and Entra ID authentication.</p>
-        </div>
+        </motion.div>
 
         <div className="space-y-2">
           {[
@@ -901,7 +944,7 @@ export const LandingPage: React.FC = () => {
             );
           })}
         </div>
-      </section>
+      </motion.section>
 
       {/* ═══════════════════════════════════════════════════════
          SECTION 10: PRODUCTION FOOTER COMPONENT

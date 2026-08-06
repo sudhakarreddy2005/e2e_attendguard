@@ -106,3 +106,74 @@ export const clipPathReveal: Variants = {
     transition: { duration: 0.7, ease: EXPO_OUT },
   },
 };
+
+// ── Directional Scroll Reveal Variants ──────────────────────────────
+
+// Slide in from left with blur (for alternate section reveals)
+export const scrollSlideLeft: Variants = {
+  hidden: { opacity: 0, x: -80, filter: 'blur(8px)', scale: 0.96 },
+  visible: {
+    opacity: 1,
+    x: 0,
+    filter: 'blur(0px)',
+    scale: 1,
+    transition: { duration: 0.65, ease: EXPO_OUT },
+  },
+};
+
+// Slide in from right with blur
+export const scrollSlideRight: Variants = {
+  hidden: { opacity: 0, x: 80, filter: 'blur(8px)', scale: 0.96 },
+  visible: {
+    opacity: 1,
+    x: 0,
+    filter: 'blur(0px)',
+    scale: 1,
+    transition: { duration: 0.65, ease: EXPO_OUT },
+  },
+};
+
+// Dramatic fade-up with scale for section headings
+export const headingReveal: Variants = {
+  hidden: { opacity: 0, y: 40, filter: 'blur(10px)', scale: 0.92 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    filter: 'blur(0px)',
+    scale: 1,
+    transition: { duration: 0.6, ease: EXPO_OUT },
+  },
+};
+
+// Stagger children from alternating directions
+export const staggerDirectional = (staggerChildren = 0.08, delayChildren = 0.1): Variants => ({
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren,
+      delayChildren,
+    },
+  },
+});
+
+// Individual item variant that slides from left (odd) or right (even) – use with custom per-item
+export const itemSlideLeft: Variants = {
+  hidden: { opacity: 0, x: -60, filter: 'blur(6px)' },
+  visible: {
+    opacity: 1,
+    x: 0,
+    filter: 'blur(0px)',
+    transition: { duration: 0.55, ease: EXPO_OUT },
+  },
+};
+
+export const itemSlideRight: Variants = {
+  hidden: { opacity: 0, x: 60, filter: 'blur(6px)' },
+  visible: {
+    opacity: 1,
+    x: 0,
+    filter: 'blur(0px)',
+    transition: { duration: 0.55, ease: EXPO_OUT },
+  },
+};
