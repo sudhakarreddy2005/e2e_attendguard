@@ -78,11 +78,26 @@ async def get_student_violations(
             detail="Unable to determine student roll number",
         )
 
+    import datetime as _dt
+    IST = _dt.timezone(_dt.timedelta(hours=5, minutes=30))
+
     # Query violations collection by student_id or roll_no
     violations = await violation_repo.find_many(
         {"$or": [{"student_id": roll_no}, {"roll_no": roll_no}]},
-        sort=[("timestamp", -1)],
+        sort=[("timestamp", -1), ("created_at", -1)],
     )
+
+    for v in violations:
+        v["_id"] = str(v.get("_id", ""))
+        dt = v.get("created_at") or v.get("timestamp")
+        if isinstance(dt, (int, float)):
+            dt = _dt.datetime.fromtimestamp(dt, tz=_dt.timezone.utc)
+        if hasattr(dt, "strftime"):
+            if dt.tzinfo is None:
+                dt = dt.replace(tzinfo=_dt.timezone.utc)
+            dt_ist = dt.astimezone(IST)
+            v["date"] = dt_ist.strftime("%d/%m/%Y, %I:%M:%S %p")
+            v["created_at"] = dt_ist.isoformat()
 
     return {
         "success": True,
