@@ -20,6 +20,8 @@ import {
   CheckCircle,
   AlertTriangle,
   XCircle,
+  Camera,
+  Maximize2,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { violationService } from '../services/violationService';
@@ -149,6 +151,19 @@ export const ViolationsPage: React.FC = () => {
 
   // Selected incident for Centered Modal Inspection
   const [selectedIncident, setSelectedIncident] = useState<Violation | null>(null);
+
+  // High-Resolution Image Preview Lightbox
+  const [previewModal, setPreviewModal] = useState<{ url: string; title: string } | null>(null);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setPreviewModal(null);
+    };
+    if (previewModal) {
+      document.addEventListener('keydown', handleKeyDown);
+    }
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [previewModal]);
 
   // Lazy Yielding limit state (10 items per batch)
   const [displayLimit, setDisplayLimit] = useState(10);
@@ -673,6 +688,7 @@ export const ViolationsPage: React.FC = () => {
               <thead>
                 <tr className="border-b border-black/10 dark:border-white/10 bg-white/50 dark:bg-white/[0.04] text-[11px] font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300">
                   <th className="py-4 px-4.5">Student</th>
+                  <th className="py-4 px-4.5">Incident Snapshot</th>
                   <th className="py-4 px-4.5">Violation Category</th>
                   <th className="py-4 px-4.5">Zone Location</th>
                   <th className="py-4 px-4.5">Timestamp</th>
@@ -682,17 +698,18 @@ export const ViolationsPage: React.FC = () => {
               </thead>
               <tbody className="divide-y divide-black/5 dark:divide-white/10 text-xs">
                 {isLoading ? (
-                  Array.from({ length: 5 }).map((_, i) => <SkeletonTableRow key={i} columns={6} />)
+                  Array.from({ length: 5 }).map((_, i) => <SkeletonTableRow key={i} columns={7} />)
                 ) : yieldedViolations.length === 0 ? (
                   <tr>
-                    <td colSpan={6}>
+                    <td colSpan={7}>
                       <EmptyState icon={ShieldAlert} title="No incidents found" subtitle="No incident records match your selected filter criteria." />
                     </td>
                   </tr>
                 ) : (
                   yieldedViolations.map((v, index) => {
                     const statusStyle = STATUS_BADGE_STYLES[v.status] || 'bg-slate-500/15 text-slate-400 border-slate-500/30';
-                    const studentAvatar = v.captured_image || studentService.getStudentImage(v.roll_no);
+                    const enrolledAvatar = studentService.getStudentImage(v.roll_no);
+                    const incidentSnapshot = v.captured_image && v.captured_image.trim().length > 0 ? v.captured_image : null;
 
                     return (
                       <motion.tr
@@ -703,11 +720,19 @@ export const ViolationsPage: React.FC = () => {
                         onClick={() => setSelectedIncident(v)}
                         className="table-row-hover even:bg-white/35 dark:even:bg-white/[0.02] cursor-pointer"
                       >
+                        {/* Student Name, Roll No & DB Profile Photo */}
                         <td className="py-3 px-4.5">
                           <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-full overflow-hidden border border-black/10 dark:border-white/20 shadow-sm shrink-0 bg-slate-200 dark:bg-slate-800">
+                            <div
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setPreviewModal({ url: enrolledAvatar, title: `${v.student_name || v.roll_no} — Enrolled DB Photo` });
+                              }}
+                              className="w-9 h-9 rounded-full overflow-hidden border border-black/10 dark:border-white/20 shadow-sm shrink-0 bg-slate-200 dark:bg-slate-800 cursor-pointer hover:scale-110 transition-transform relative group"
+                              title="Click to preview Enrolled DB Photo"
+                            >
                               <img
-                                src={studentAvatar}
+                                src={enrolledAvatar}
                                 alt={v.student_name || v.roll_no}
                                 className="w-full h-full object-cover"
                                 onError={(e) => {
@@ -721,22 +746,60 @@ export const ViolationsPage: React.FC = () => {
                             </div>
                           </div>
                         </td>
+
+                        {/* Incident Snapshot Column */}
+                        <td className="py-3 px-4.5">
+                          {incidentSnapshot ? (
+                            <div
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setPreviewModal({ url: incidentSnapshot, title: `Incident Snapshot — ${v.student_name || v.roll_no}` });
+                              }}
+                              className="w-10 h-10 rounded-xl overflow-hidden border border-white/80 dark:border-white/20 shadow-sm bg-slate-200 dark:bg-slate-800 cursor-pointer hover:scale-105 hover:ring-2 hover:ring-[#007AFF] transition-all relative group"
+                              title="Click to preview Incident Camera Photo"
+                            >
+                              <img
+                                src={incidentSnapshot}
+                                alt="Incident Snapshot"
+                                className="w-full h-full object-cover"
+                              />
+                              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                                <Maximize2 className="w-3.5 h-3.5 text-white" />
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-400 text-[10px] font-medium">
+                              <Camera className="w-3 h-3 text-slate-400 shrink-0" />
+                              <span>No Camera Snapshot</span>
+                            </div>
+                          )}
+                        </td>
+
+                        {/* Category */}
                         <td className="py-3.5 px-4.5">
                           <span className={`px-2.5 py-1 rounded-full text-[11px] font-bold border ${VIOLATION_TYPE_STYLES[v.type] || 'bg-black/5 text-slate-600 border-black/10'}`}>
                             {v.type}
                           </span>
                         </td>
+
+                        {/* Zone Location */}
                         <td className="py-3.5 px-4.5 font-medium text-slate-600 dark:text-slate-300">
                           {v.location}
                         </td>
-                         <td className="py-3.5 px-4.5 text-slate-500 dark:text-slate-400 font-mono text-[11px]">
+
+                        {/* Timestamp */}
+                        <td className="py-3.5 px-4.5 text-slate-500 dark:text-slate-400 font-mono text-[11px]">
                           {v.date || formatToIST(v.created_at)}
                         </td>
+
+                        {/* Status */}
                         <td className="py-3.5 px-4.5 text-center">
                           <span className={`px-2.5 py-1 rounded-full text-[11px] font-extrabold border ${statusStyle}`}>
                             {v.status}
                           </span>
                         </td>
+
+                        {/* Actions */}
                         <td className="py-3.5 px-4.5 text-right">
                           <div className="flex items-center justify-end gap-1">
                             <button
@@ -793,6 +856,44 @@ export const ViolationsPage: React.FC = () => {
         onClose={() => setSelectedIncident(null)}
         onUpdateStatus={handleUpdateStatus}
       />
+
+      {/* High-Resolution Image Preview Lightbox */}
+      <AnimatePresence>
+        {previewModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setPreviewModal(null)}
+            className="fixed inset-0 z-[100] bg-slate-950/85 backdrop-blur-xl flex items-center justify-center p-4 cursor-pointer"
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className="relative max-w-3xl max-h-[85vh] glass-panel rounded-[28px] overflow-hidden border border-white/20 p-2 shadow-2xl flex flex-col items-center"
+            >
+              <div className="w-full flex items-center justify-between px-4 py-2 border-b border-white/10">
+                <h3 className="text-xs font-bold text-white truncate">{previewModal.title}</h3>
+                <button
+                  onClick={() => setPreviewModal(null)}
+                  className="p-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-white transition-colors cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+              <div className="p-2 overflow-hidden flex items-center justify-center">
+                <img
+                  src={previewModal.url}
+                  alt={previewModal.title}
+                  className="max-h-[70vh] w-auto object-contain rounded-2xl border border-white/10"
+                />
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Log Violation Modal (Preserves Drag & Drop / Side-by-side comparison) */}
       <GlassModal isOpen={showAddModal} onClose={() => setShowAddModal(false)} title="Log Campus Incident with Image Verification" maxWidth="max-w-xl">
