@@ -77,8 +77,8 @@ export const Footer: React.FC<FooterProps> = ({
           {/* Brand Column */}
           <div className="md:col-span-2 space-y-3">
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-[#007AFF] via-[#00C6FF] to-[#30D158] flex items-center justify-center text-white font-bold shadow-md shrink-0">
-                <ShieldCheck className="w-4 h-4 text-white" />
+              <div className="w-8 h-8 rounded-full overflow-hidden shadow-md shrink-0 border border-white/30 bg-slate-900">
+                <img src="/attendGuardlogov3.jpeg" alt="AttendGuard Logo" className="w-full h-full object-cover" />
               </div>
               <div>
                 <span className="font-extrabold text-sm text-white tracking-tight block">
@@ -204,7 +204,11 @@ export const Footer: React.FC<FooterProps> = ({
 
         {/* Bottom Bar: Copyright & System SLA */}
         <div className="flex flex-col sm:flex-row items-center justify-between gap-2 text-[10px] font-mono text-slate-400 pt-1">
-          <p>© 2026 AttendGuard. {institutionName}. All rights reserved.</p>
+          <p className="flex items-center gap-1.5 font-medium">
+            <span>© 2026 AttendGuard.</span>
+            <img src="/vvitlogo.png" alt="VVIT Logo" className="w-4 h-4 object-contain inline-block rounded-full bg-white p-0.5" />
+            <span>{institutionName}. All rights reserved.</span>
+          </p>
           <div className="flex items-center gap-2">
             <span className="flex items-center gap-1 text-[#30D158] font-bold">
               <span className="w-1.5 h-1.5 rounded-full bg-[#30D158] animate-pulse" />

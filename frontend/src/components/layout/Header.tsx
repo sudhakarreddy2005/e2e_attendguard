@@ -39,7 +39,9 @@ export const Header: React.FC<HeaderProps> = ({ onOpenAI }) => {
       setLoading(true);
       const historyData = await notificationService.getHistory(30).catch(() => []);
       setMailHistory(historyData || []);
-      setUnreadCount(historyData?.length || 0);
+      const total = historyData?.length || 0;
+      const readCount = parseInt(localStorage.getItem('attendguard_read_mail_count') || '0', 10);
+      setUnreadCount(Math.max(0, total - readCount));
     } catch {
       // Fallback
     } finally {
@@ -75,6 +77,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenAI }) => {
   }, [showNotifications]);
 
   const handleMarkAllRead = () => {
+    localStorage.setItem('attendguard_read_mail_count', (mailHistory.length || 0).toString());
     setUnreadCount(0);
   };
 

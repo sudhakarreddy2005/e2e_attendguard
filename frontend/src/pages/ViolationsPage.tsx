@@ -413,7 +413,7 @@ export const ViolationsPage: React.FC = () => {
     dateFilter !== '';
 
   return (
-    <PageTransition className="space-y-5">
+    <PageTransition className="space-y-3.5">
       {/* Inline Toast & Confirm Dialog */}
       <InlineToast toast={toast} onDismiss={dismissToast} />
       <InlineConfirmDialog state={confirmState} onCancel={dismissConfirm} />
@@ -467,24 +467,24 @@ export const ViolationsPage: React.FC = () => {
       </div>
 
       {/* Advanced Search & Smart Filter Control Bar */}
-      <div className="glass-panel p-4 rounded-[24px] space-y-3 shadow-md border border-white/60 dark:border-white/10">
+      <div className="glass-panel px-3 py-2 rounded-xl space-y-1.5 shadow-xs border border-white/60 dark:border-white/10">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2 text-xs font-extrabold text-slate-800 dark:text-white">
-            <Filter className="w-4 h-4 text-[#007AFF]" strokeWidth={2} />
+          <div className="flex items-center gap-1.5 text-[11px] font-bold text-slate-800 dark:text-white">
+            <Filter className="w-3.5 h-3.5 text-[#007AFF]" strokeWidth={2} />
             <span>Incident Smart Filters</span>
           </div>
 
           {isFiltered && (
             <button
               onClick={clearAllFilters}
-              className="text-[11px] font-bold text-[#FF453A] hover:underline flex items-center gap-1 cursor-pointer"
+              className="text-[10px] font-bold text-[#FF453A] hover:underline flex items-center gap-1 cursor-pointer"
             >
-              <X className="w-3.5 h-3.5" /> Reset Filters
+              <X className="w-3 h-3" /> Reset Filters
             </button>
           )}
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3 text-xs">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-1.5 text-xs">
           {/* Global Search */}
           <div className="relative lg:col-span-2">
             <input
@@ -492,9 +492,9 @@ export const ViolationsPage: React.FC = () => {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search student, roll, ID, or remarks..."
-              className="w-full pl-9 pr-4 py-2 rounded-2xl bg-white/70 dark:bg-white/10 border border-slate-200 dark:border-white/10 text-xs text-slate-700 dark:text-slate-200 placeholder-slate-400 focus:outline-none focus:border-[#007AFF] font-medium"
+              className="w-full pl-7 pr-2.5 py-1 rounded-lg bg-white/70 dark:bg-white/10 border border-slate-200 dark:border-white/10 text-[11px] text-slate-700 dark:text-slate-200 placeholder-slate-400 focus:outline-none focus:border-[#007AFF] font-medium"
             />
-            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" strokeWidth={2} />
+            <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2 top-1.5" strokeWidth={2} />
           </div>
 
           {/* Date Calendar Picker */}
@@ -503,9 +503,9 @@ export const ViolationsPage: React.FC = () => {
               type="date"
               value={dateFilter}
               onChange={(e) => setDateFilter(e.target.value)}
-              className="w-full pl-9 pr-3 py-2 rounded-2xl bg-white/70 dark:bg-white/10 border border-slate-200 dark:border-white/10 text-xs font-semibold text-slate-700 dark:text-slate-200 focus:outline-none focus:border-[#007AFF]"
+              className="w-full pl-7 pr-2 py-1 rounded-lg bg-white/70 dark:bg-white/10 border border-slate-200 dark:border-white/10 text-[11px] font-semibold text-slate-700 dark:text-slate-200 focus:outline-none focus:border-[#007AFF] [&::-webkit-calendar-picker-indicator]:opacity-0"
             />
-            <Calendar className="w-4 h-4 text-slate-400 absolute left-3 top-2.5 pointer-events-none" strokeWidth={2} />
+            <Calendar className="w-3.5 h-3.5 text-slate-400 absolute left-2 top-1.5 pointer-events-none" strokeWidth={2} />
           </div>
 
           {/* Violation Type Filter */}
@@ -513,7 +513,7 @@ export const ViolationsPage: React.FC = () => {
             <select
               value={typeFilter}
               onChange={(e) => setTypeFilter(e.target.value)}
-              className="w-full px-3 py-2 rounded-2xl bg-white/70 dark:bg-white/10 border border-slate-200 dark:border-white/10 text-xs font-semibold text-slate-700 dark:text-slate-200 focus:outline-none focus:border-[#007AFF]"
+              className="w-full px-2 py-1 rounded-lg bg-white/70 dark:bg-white/10 border border-slate-200 dark:border-white/10 text-[11px] font-semibold text-slate-700 dark:text-slate-200 focus:outline-none focus:border-[#007AFF]"
             >
               <option value="ALL">All Categories</option>
               <option value="Late Arrival">Late Arrival</option>
@@ -527,7 +527,7 @@ export const ViolationsPage: React.FC = () => {
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="w-full px-3 py-2 rounded-2xl bg-white/70 dark:bg-white/10 border border-slate-200 dark:border-white/10 text-xs font-semibold text-slate-700 dark:text-slate-200 focus:outline-none focus:border-[#007AFF]"
+              className="w-full px-2 py-1 rounded-lg bg-white/70 dark:bg-white/10 border border-slate-200 dark:border-white/10 text-[11px] font-semibold text-slate-700 dark:text-slate-200 focus:outline-none focus:border-[#007AFF]"
             >
               <option value="ALL">All Statuses</option>
               <option value="Detected">Detected / Pending</option>
@@ -544,7 +544,7 @@ export const ViolationsPage: React.FC = () => {
             <select
               value={deptFilter}
               onChange={(e) => setDeptFilter(e.target.value)}
-              className="w-full px-3 py-2 rounded-2xl bg-white/70 dark:bg-white/10 border border-slate-200 dark:border-white/10 text-xs font-semibold text-slate-700 dark:text-slate-200 focus:outline-none focus:border-[#007AFF]"
+              className="w-full px-2 py-1 rounded-lg bg-white/70 dark:bg-white/10 border border-slate-200 dark:border-white/10 text-[11px] font-semibold text-slate-700 dark:text-slate-200 focus:outline-none focus:border-[#007AFF]"
             >
               <option value="ALL">All Depts</option>
               <option value="CSE">CSE</option>
@@ -584,7 +584,7 @@ export const ViolationsPage: React.FC = () => {
                   : null;
                 const statusStyle = STATUS_BADGE_STYLES[v.status] || 'bg-slate-500/15 text-slate-400 border-slate-500/30';
                 const vTypeStyle = VIOLATION_TYPE_STYLES[v.type] || 'bg-black/5 text-slate-600 border-black/10';
-                const avatarUrl = v.captured_image || studentService.getStudentImage(v.roll_no);
+                const avatarUrl = studentService.getStudentImage(v.roll_no);
 
                 return (
                   <motion.div
@@ -608,7 +608,14 @@ export const ViolationsPage: React.FC = () => {
 
                     {/* Student Avatar & Identification */}
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full overflow-hidden border border-white/80 dark:border-white/20 shadow-xs shrink-0">
+                      <div
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setPreviewModal({ url: avatarUrl, title: `${v.student_name || v.roll_no} — Enrolled DB Photo` });
+                        }}
+                        className="w-10 h-10 rounded-full overflow-hidden border border-white/80 dark:border-white/20 shadow-xs shrink-0 cursor-pointer hover:scale-110 transition-transform relative group"
+                        title="Click to preview Enrolled DB Photo"
+                      >
                         <img
                           src={avatarUrl}
                           alt={v.student_name || v.roll_no}

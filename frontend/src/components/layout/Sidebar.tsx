@@ -64,9 +64,9 @@ export const Sidebar: React.FC<SidebarProps> = () => {
         <div className="flex items-center gap-3 shrink-0">
           <motion.div
             whileHover={{ scale: 1.05 }}
-            className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-[#007AFF] to-[#00C6FF] text-white flex items-center justify-center shadow-md shadow-[#007AFF]/20 shrink-0 border border-white/30"
+            className="w-10 h-10 rounded-full overflow-hidden shadow-md shrink-0 border border-white/40 dark:border-white/20 bg-slate-900"
           >
-            <ShieldCheck className="w-5 h-5 text-white" strokeWidth={2.2} />
+            <img src="/attendGuardlogov3.jpeg" alt="AttendGuard Logo" className="w-full h-full object-cover" />
           </motion.div>
 
           <motion.div

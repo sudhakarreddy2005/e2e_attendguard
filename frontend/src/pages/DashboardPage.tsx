@@ -61,15 +61,14 @@ export const DashboardPage: React.FC = () => {
           {/* VVIT Institutional Brand Identity Card */}
           <div className="shrink-0">
             <div className="glass-card px-5 py-3.5 rounded-2xl border border-white/60 dark:border-white/10 bg-white/70 dark:bg-white/[0.04] flex items-center gap-3.5 shadow-xs backdrop-blur-xl">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-[#0078D4] via-[#00A4EF] to-[#5C2D91] p-0.5 shadow-md flex items-center justify-center">
-                <div className="w-full h-full bg-slate-950/85 rounded-[10px] flex items-center justify-center">
-                  <Building2 className="w-5 h-5 text-[#00A4EF]" strokeWidth={2} />
-                </div>
+              <div className="w-10 h-10 rounded-full overflow-hidden shadow-md shrink-0 border border-white/40 dark:border-white/20 bg-white p-0.5 flex items-center justify-center">
+                <img src="/vvitlogo.png" alt="VVIT Logo" className="w-full h-full object-contain" />
               </div>
               <div className="text-left">
                 <div className="flex items-center gap-2">
-                  <span className="text-sm font-extrabold tracking-tight text-slate-800 dark:text-white">
-                    VVIT Campus
+                  <span className="text-sm font-extrabold tracking-tight text-slate-800 dark:text-white flex items-center gap-1.5">
+                    {/* <img src="/vvitlogo.png" alt="VVIT" className="w-4 h-4 object-contain inline-block" /> */}
+                    VVITU Campus
                   </span>
                   <span className="px-2 py-0.5 rounded-full text-[9px] font-extrabold uppercase bg-[#0078D4]/15 text-[#0078D4] dark:text-[#2896F3] border border-[#0078D4]/30">
                     @vvit.net

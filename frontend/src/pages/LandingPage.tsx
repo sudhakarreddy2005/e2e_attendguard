@@ -211,12 +211,12 @@ export const LandingPage: React.FC = () => {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate('/home')}>
             <motion.div
-              whileHover={{ scale: 1.08, rotate: 4 }}
+              whileHover={{ scale: 1.08 }}
               whileTap={{ scale: 0.94 }}
               transition={SMOOTH_SPRING}
-              className="w-7.5 h-7.5 rounded-xl bg-gradient-to-tr from-[#007AFF] via-[#00C6FF] to-[#30D158] flex items-center justify-center text-white shadow-md shrink-0"
+              className="w-7.5 h-7.5 rounded-full overflow-hidden shadow-md shrink-0 border border-white/30 bg-slate-900"
             >
-              <ShieldCheck className="w-4 h-4 text-white" />
+              <img src="/attendGuardlogov3.jpeg" alt="AttendGuard Logo" className="w-full h-full object-cover" />
             </motion.div>
             <div className="flex items-center gap-1.5">
               <span className="font-extrabold text-xs text-slate-900 dark:text-white tracking-tight">
@@ -848,9 +848,9 @@ export const LandingPage: React.FC = () => {
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true, margin: '-8% 0px' }}
-          whileHover={{ borderColor: 'rgba(191,90,242,0.5)', y: -2 }}
+          whileHover={{ y: -2 }}
           transition={SMOOTH_SPRING}
-          className="rounded-xl bg-slate-900 dark:bg-slate-950 text-white p-5 space-y-3 border border-slate-800 dark:border-white/15 shadow-xl"
+          className="rounded-xl bg-slate-900 dark:bg-slate-950 text-white p-5 space-y-3 border border-slate-800 dark:border-white/15 shadow-xl hover:border-[#BF5AF2]/50 transition-colors"
         >
           <div className="flex items-center gap-1.5 text-xs font-bold text-[#BF5AF2]">
             <Terminal className="w-3.5 h-3.5" />

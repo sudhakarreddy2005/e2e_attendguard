@@ -152,16 +152,15 @@ export const LoginPage: React.FC = () => {
           {/* Header Section */}
           <div className="flex flex-col items-center text-center mb-8">
             <motion.div
-              whileHover={{ scale: 1.06, rotate: 2 }}
-              className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-[#0078D4] via-[#00A4EF] to-[#5C2D91] p-0.5 shadow-2xl mb-4 border border-white/40"
+              whileHover={{ scale: 1.06 }}
+              className="w-16 h-16 rounded-full overflow-hidden shadow-2xl mb-4 border border-white/40 bg-slate-900"
             >
-              <div className="w-full h-full bg-slate-950/85 backdrop-blur-xl rounded-[14px] flex items-center justify-center text-white">
-                <ShieldCheck className="w-9 h-9 text-[#0078D4] dark:text-[#2896F3]" strokeWidth={2} />
-              </div>
+              <img src="/attendGuardlogov3.jpeg" alt="AttendGuard Logo" className="w-full h-full object-cover" />
             </motion.div>
 
             <span className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full text-[11px] font-bold bg-[#0078D4]/15 text-[#0078D4] dark:text-[#2896F3] border border-[#0078D4]/30 mb-3 backdrop-blur-md">
-              <Building2 className="w-3.5 h-3.5" strokeWidth={2} /> Institutional Access • @vvit.net
+              <img src="/vvitlogo.png" alt="VVIT Logo" className="w-3.5 h-3.5 object-contain inline-block rounded-full bg-white p-0.5" />
+              <span>Institutional Access • @vvit.net</span>
             </span>
 
             <h1 className="text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">

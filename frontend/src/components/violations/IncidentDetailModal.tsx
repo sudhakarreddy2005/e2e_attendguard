@@ -105,14 +105,20 @@ export const IncidentDetailModal: React.FC<IncidentDetailModalProps> = ({
           {/* Card 1: Student Identity & Incident Overview Header */}
           <div className="p-4 rounded-2xl bg-slate-50/80 dark:bg-white/[0.04] border border-slate-200/80 dark:border-white/10 flex items-center justify-between gap-4">
             <div className="flex items-center gap-3.5">
-              <img
-                src={enrolledAvatar}
-                alt={incident.student_name || incident.roll_no}
-                className="w-12 h-12 rounded-full object-cover border-2 border-[#007AFF] shadow-sm shrink-0"
-                onError={(e) => {
-                  e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(incident.student_name || incident.roll_no)}&background=007AFF&color=fff&bold=true`;
-                }}
-              />
+              <div
+                onClick={() => setPreviewImage({ url: enrolledAvatar, title: `${incident.student_name || incident.roll_no} — Enrolled DB Photo` })}
+                className="w-12 h-12 rounded-full overflow-hidden border-2 border-[#007AFF] shadow-sm shrink-0 cursor-pointer hover:scale-108 transition-transform relative group"
+                title="Click to preview Enrolled DB Photo"
+              >
+                <img
+                  src={enrolledAvatar}
+                  alt={incident.student_name || incident.roll_no}
+                  className="w-full h-full object-cover"
+                  onError={(e) => {
+                    e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(incident.student_name || incident.roll_no)}&background=007AFF&color=fff&bold=true`;
+                  }}
+                />
+              </div>
               <div className="space-y-0.5">
                 <h3 className="text-sm font-extrabold text-slate-800 dark:text-white">
                   {incident.student_name || 'Student Record'}
