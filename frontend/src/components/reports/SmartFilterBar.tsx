@@ -143,6 +143,10 @@ export const SmartFilterBar: React.FC<SmartFilterBarProps> = ({
                   <option value="Mechanical">Mechanical Engineering (MECH)</option>
                   <option value="Civil">Civil Engineering (CIVIL)</option>
                   <option value="Electrical">Electrical & Electronics (EEE)</option>
+                  <option value="Information Technology">Information Technology (IT)</option>
+                  <option value="Cyber Security & IoT">IoT & Cyber Security (CIC)</option>
+                  <option value="Cyber Security">Cyber Security (CSO)</option>
+                  <option value="CSM">CS & Machine Learning (CSM)</option>
                   <option value="AI & Data Science">AI & Data Science (AIDS)</option>
                 </select>
               </div>
@@ -158,6 +162,9 @@ export const SmartFilterBar: React.FC<SmartFilterBarProps> = ({
                   className="w-full px-3 py-2 rounded-xl text-xs font-bold bg-white/70 dark:bg-white/10 text-slate-800 dark:text-slate-100 border border-white/30 dark:border-white/10 focus:outline-none focus:border-[#007AFF]"
                 >
                   <option value="All Blocks">All Campus Blocks</option>
+                  <option value="Main Gate">Main Gate & Security Post</option>
+                  <option value="Playground">Sports Arena & Playground</option>
+                  <option value="OAT">Open Air Theatre (OAT)</option>
                   <option value="Central Gate">Central Gate & Main Lobby</option>
                   <option value="North Academic">North Academic Block</option>
                   <option value="Science Complex">Science Complex & Labs</option>
@@ -229,6 +236,7 @@ export const SmartFilterBar: React.FC<SmartFilterBarProps> = ({
                   <option value="Section A">Section A</option>
                   <option value="Section B">Section B</option>
                   <option value="Section C">Section C</option>
+                  <option value="Section D">Section D</option>
                 </select>
               </div>
             </div>

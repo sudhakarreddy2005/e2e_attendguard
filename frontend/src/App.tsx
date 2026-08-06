@@ -10,6 +10,7 @@ import { Header } from './components/layout/Header';
 import { CommandPalette } from './components/layout/CommandPalette';
 import { AIAssistantModal } from './components/ai/AIAssistantModal';
 
+import { LandingPage } from './pages/LandingPage';
 import { LoginPage } from './pages/LoginPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { StudentsPage } from './pages/StudentsPage';
@@ -34,15 +35,30 @@ const queryClient = new QueryClient({
 });
 
 const DefaultRedirect: React.FC = () => {
-  const { user, hasPermission } = useAuth();
-  if (hasPermission('student.self') && (user?.role || '').toUpperCase() === 'STUDENT') {
-    return <Navigate to="/student-portal" replace />;
-  }
+  const { user, isAuthenticated, hasPermission } = useAuth();
+  if (!isAuthenticated) return <Navigate to="/home" replace />;
+  const role = (user?.role || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+  if (role === 'SECURITY') return <Navigate to="/detect" replace />;
+  if (role === 'DEO') return <Navigate to="/students" replace />;
+  if (role === 'STUDENT') return <Navigate to="/student-portal" replace />;
   if (hasPermission('dashboard.view')) return <Navigate to="/dashboard" replace />;
   if (hasPermission('students.view')) return <Navigate to="/students" replace />;
-  if (hasPermission('recognition.view')) return <Navigate to="/detect" replace />;
   if (hasPermission('violations.view')) return <Navigate to="/violations" replace />;
   return <Navigate to="/student-portal" replace />;
+};
+
+const LandingLayout: React.FC = () => {
+  return (
+    <div className="min-h-screen text-slate-900 dark:text-slate-100 font-sans relative scroll-smooth bg-slate-50 dark:bg-slate-950 transition-colors duration-300">
+      {/* Floating Apple Mesh Background */}
+      <div className="apple-mesh-bg">
+        <div className="apple-mesh-blob-3" />
+      </div>
+      <main className="w-full">
+        <LandingPage />
+      </main>
+    </div>
+  );
 };
 
 const ProtectedLayout: React.FC = () => {
@@ -155,6 +171,8 @@ export function App() {
             </div>
 
             <Routes>
+              <Route path="/" element={<LandingLayout />} />
+              <Route path="/home" element={<LandingLayout />} />
               <Route path="/login" element={<LoginPage />} />
               <Route path="/*" element={<ProtectedLayout />} />
             </Routes>

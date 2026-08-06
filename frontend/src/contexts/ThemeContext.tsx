@@ -35,11 +35,18 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }, [theme]);
 
   const setTheme = (newTheme: Theme) => {
-    setThemeState(newTheme);
+    if (typeof document !== 'undefined' && (document as any).startViewTransition) {
+      (document as any).startViewTransition(() => {
+        setThemeState(newTheme);
+      });
+    } else {
+      setThemeState(newTheme);
+    }
   };
 
   const toggleTheme = () => {
-    setThemeState((prev) => (prev === 'dark' ? 'light' : 'dark'));
+    const nextTheme = isDark ? 'light' : 'dark';
+    setTheme(nextTheme);
   };
 
   return (

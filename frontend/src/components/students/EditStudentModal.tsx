@@ -4,6 +4,7 @@ import { Student } from '../../types/student';
 import { studentService } from '../../services/studentService';
 import { useAuth } from '../../contexts/AuthContext';
 import { Save, Camera, ShieldCheck, Lock, Upload } from 'lucide-react';
+import { WebcamPhotoInput } from './WebcamPhotoInput';
 
 interface EditStudentModalProps {
   student: Student | null;
@@ -32,18 +33,7 @@ export const EditStudentModal: React.FC<EditStudentModalProps> = ({
   const [phone, setPhone] = useState(student.contact_info?.phone || '');
   const [email, setEmail] = useState(student.contact_info?.email || '');
   const [imageFile, setImageFile] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setImageFile(file);
-      const reader = new FileReader();
-      reader.onloadend = () => setImagePreview(reader.result as string);
-      reader.readAsDataURL(file);
-    }
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -165,6 +155,12 @@ export const EditStudentModal: React.FC<EditStudentModalProps> = ({
               <option value="ECE">ECE</option>
               <option value="EEE">EEE</option>
               <option value="MECH">MECH</option>
+              <option value="CIVIL">CIVIL</option>
+              <option value="IT">IT</option>
+              <option value="CIC">CIC</option>
+              <option value="CSO">CSO</option>
+              <option value="CSM">CSM</option>
+              <option value="AIDS">AIDS</option>
             </select>
           </div>
 
@@ -180,6 +176,7 @@ export const EditStudentModal: React.FC<EditStudentModalProps> = ({
               <option value="A">Section A</option>
               <option value="B">Section B</option>
               <option value="C">Section C</option>
+              <option value="D">Section D</option>
             </select>
           </div>
         </div>
@@ -215,49 +212,28 @@ export const EditStudentModal: React.FC<EditStudentModalProps> = ({
 
         {/* Face Image Update Section */}
         <div className="pt-2 border-t border-black/5 dark:border-white/10">
-          <div className="flex items-center justify-between mb-1.5">
-            <label className="block text-slate-700 dark:text-slate-200 font-semibold flex items-center gap-1.5">
-              <Camera className="w-3.5 h-3.5 text-[#007AFF]" /> Face Registration Photo
-            </label>
-            {isAdmin ? (
-              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#007AFF]/10 text-[#007AFF] flex items-center gap-1">
-                <Upload className="w-3 h-3" /> Re-embed Vision Profile
-              </span>
-            ) : (
-              <span className="text-[10px] text-slate-400">Admin Only</span>
-            )}
-          </div>
-
           {isAdmin ? (
             <div className="space-y-2">
-              <div className="flex items-center gap-3 p-3 rounded-2xl bg-black/5 dark:bg-white/5 border border-dashed border-black/20 dark:border-white/20">
-                {imagePreview ? (
-                  <img
-                    src={imagePreview}
-                    alt="Preview"
-                    className="w-12 h-12 rounded-xl object-cover ring-2 ring-[#007AFF]"
-                  />
-                ) : (
-                  <div className="w-12 h-12 rounded-xl bg-[#007AFF]/10 text-[#007AFF] flex items-center justify-center font-bold">
-                    <Camera className="w-5 h-5" />
-                  </div>
-                )}
-                <div className="flex-1">
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handleImageChange}
-                    className="w-full text-xs text-slate-500 dark:text-slate-400 file:mr-3 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-[#007AFF] file:text-white hover:file:bg-[#0056b3] cursor-pointer"
-                  />
-                  <p className="text-[10px] text-slate-400 mt-1">
-                    Uploading a new photo will calculate fresh 512D ArcFace embeddings & remove old embeddings.
-                  </p>
-                </div>
-              </div>
+              <WebcamPhotoInput
+                selectedFile={imageFile}
+                onImageSelected={(file) => setImageFile(file)}
+                label="Re-embed Vision Profile Photo"
+              />
+              <p className="text-[10px] text-slate-400">
+                Updating photo will calculate fresh 512D ArcFace embeddings & remove old embeddings.
+              </p>
             </div>
           ) : (
-            <div className="p-3 rounded-2xl bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/10 text-slate-400 text-center">
-              Photo re-registration is restricted to Administrators.
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <label className="block text-slate-700 dark:text-slate-200 font-semibold text-xs flex items-center gap-1">
+                  <Camera className="w-3.5 h-3.5 text-[#007AFF]" /> Face Registration Photo
+                </label>
+                <span className="text-[10px] text-slate-400">Admin Only</span>
+              </div>
+              <div className="p-3 rounded-2xl bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/10 text-slate-400 text-center">
+                Photo re-registration is restricted to Administrators.
+              </div>
             </div>
           )}
         </div>

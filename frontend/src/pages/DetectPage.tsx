@@ -534,6 +534,12 @@ export const DetectPage: React.FC = () => {
                   <option value="ECE">ECE</option>
                   <option value="EEE">EEE</option>
                   <option value="MECH">MECH</option>
+                  <option value="CIVIL">CIVIL</option>
+                  <option value="IT">IT</option>
+                  <option value="CIC">CIC</option>
+                  <option value="CSO">CSO</option>
+                  <option value="CSM">CSM</option>
+                  <option value="AIDS">AIDS</option>
                 </select>
               </div>
               <div>
@@ -547,6 +553,7 @@ export const DetectPage: React.FC = () => {
                   <option value="A">Section A</option>
                   <option value="B">Section B</option>
                   <option value="C">Section C</option>
+                  <option value="D">Section D</option>
                 </select>
               </div>
             </div>
@@ -557,6 +564,9 @@ export const DetectPage: React.FC = () => {
                 onChange={(e) => setLocation(e.target.value)}
                 className="w-full px-3 py-2 rounded-2xl bg-black/5 dark:bg-white/10 border border-white/20 dark:border-white/10 text-slate-700 dark:text-slate-200 font-semibold"
               >
+                <option value="Main Gate">Main Gate</option>
+                <option value="Playground">Playground</option>
+                <option value="OAT">OAT (Open Air Theatre)</option>
                 <option value="Central Block">Central Block</option>
                 <option value="A Block">A Block</option>
                 <option value="B Block">B Block</option>
@@ -573,7 +583,9 @@ export const DetectPage: React.FC = () => {
               >
                 <option value="Late Arrival">Late Arrival</option>
                 <option value="Dress Code">Dress Code</option>
-                <option value="Bunk">Bunk</option>
+                <option value="Bunk">Bunking Class</option>
+                <option value="No ID Card">No ID Card</option>
+                <option value="Unauthorized Access">Unauthorized Access</option>
               </select>
             </div>
             <div>
@@ -582,19 +594,55 @@ export const DetectPage: React.FC = () => {
                 type="text"
                 value={remarks}
                 onChange={(e) => setRemarks(e.target.value)}
-                placeholder="Custom remark (e.g. Arrived at Gate 2, ID missing...)"
+                placeholder={`Custom remark for ${location}...`}
                 className="w-full px-3 py-2 rounded-2xl bg-black/5 dark:bg-white/10 border border-white/20 dark:border-white/10 text-slate-700 dark:text-slate-200 text-xs font-medium focus:outline-none focus:border-[#007AFF]"
               />
+              {/* Location & Violation Type Dynamic Presets */}
               <div className="flex flex-wrap gap-1 mt-2">
-                {['Late Arrival at Main Gate', 'No ID Card', 'Dress Code Violation', 'Bunking Class'].map((preset) => (
+                {((loc: string, vType: string) => {
+                  const locName = loc === 'OAT' ? 'OAT (Open Air Theatre)' : loc;
+                  if (vType === 'Late Arrival') {
+                    return [
+                      `Late Arrival at ${locName}`,
+                      `Late Arrival at ${locName} after 9:00 AM`,
+                      `Delayed entry scan at ${locName}`,
+                    ];
+                  }
+                  if (vType === 'Dress Code') {
+                    return [
+                      `Dress Code Violation at ${locName}`,
+                      `Improper uniform at ${locName}`,
+                      `Missing blazer/shirt at ${locName}`,
+                    ];
+                  }
+                  if (vType === 'Bunk' || vType === 'Bunking Class') {
+                    return [
+                      `Bunking Class at ${locName}`,
+                      `Loitering near ${locName} during class`,
+                      `Unapproved presence at ${locName}`,
+                    ];
+                  }
+                  if (vType === 'No ID Card') {
+                    return [
+                      `No ID Card at ${locName}`,
+                      `Failed ID scan at ${locName}`,
+                      `Temporary pass issued at ${locName}`,
+                    ];
+                  }
+                  return [
+                    `Unauthorized movement near ${locName}`,
+                    `Unapproved exit attempt at ${locName}`,
+                    `Restricted zone flag at ${locName}`,
+                  ];
+                })(location, violationType).map((preset) => (
                   <button
                     key={preset}
                     type="button"
                     onClick={() => setRemarks(preset)}
-                    className={`text-[10px] px-2 py-0.5 rounded-full font-semibold border transition-all cursor-pointer ${
+                    className={`text-[10px] px-2.5 py-1 rounded-xl font-semibold border transition-all cursor-pointer ${
                       remarks === preset
                         ? 'bg-[#007AFF]/20 text-[#007AFF] border-[#007AFF]/40 font-bold'
-                        : 'bg-black/5 dark:bg-white/5 text-slate-500 hover:text-slate-700 dark:hover:text-slate-200 border-transparent'
+                        : 'bg-black/5 dark:bg-white/5 text-slate-500 hover:text-slate-700 dark:hover:text-slate-200 border-black/5 dark:border-white/10'
                     }`}
                   >
                     {preset}

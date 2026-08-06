@@ -5,7 +5,7 @@ Entity Extractor Module — Extracts structured entities (department, section, s
 import re
 from typing import Any, Dict
 
-DEPARTMENTS = ["CSE", "ECE", "EEE", "MECH", "CIVIL", "IT", "AIML", "AIDS", "CS"]
+DEPARTMENTS = ["CSE", "ECE", "EEE", "MECH", "CIVIL", "IT", "CIC", "CSO", "CSM", "AIML", "AIDS", "CS"]
 
 
 def extract_entities(query: str) -> Dict[str, Any]:

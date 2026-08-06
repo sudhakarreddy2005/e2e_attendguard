@@ -9,7 +9,10 @@ ALLOWED_LOCATIONS = {
     "A Block", "B Block", "C Block", "D Block",
     "U Block", "Central Block", "Playground",
 }
-ALLOWED_STATUSES = {"Pending", "Reviewed", "Resolved", "Escalated"}
+ALLOWED_STATUSES = {
+    "Pending", "Reviewed", "Resolved", "Escalated",
+    "Detected", "Under Review", "Verified", "Action Taken", "Closed", "Dismissed",
+}
 
 
 class CreateViolationRequest(BaseModel):

@@ -149,14 +149,22 @@ class ViolationService:
     @staticmethod
     async def get_violations(filters: Optional[dict] = None) -> list[dict]:
         """Get violations with student names."""
+        import datetime as _dt
+        IST = _dt.timezone(_dt.timedelta(hours=5, minutes=30))
+
         violations = await violation_repo.find_with_student_names(filters)
 
         for v in violations:
             v["_id"] = str(v.get("_id", ""))
             dt = v.get("created_at")
             if hasattr(dt, "strftime"):
-                v["date"] = dt.strftime("%b %d, %Y %I:%M %p")
-                v["iso_date"] = dt.strftime("%Y-%m-%d")
+                # Convert UTC datetime to IST for display
+                if dt.tzinfo is None:
+                    dt = dt.replace(tzinfo=_dt.timezone.utc)
+                dt_ist = dt.astimezone(IST)
+                v["date"] = dt_ist.strftime("%b %d, %Y %I:%M %p")
+                v["iso_date"] = dt_ist.strftime("%Y-%m-%d")
+                v["created_at"] = dt_ist.isoformat()
 
         return violations
 

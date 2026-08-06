@@ -323,6 +323,10 @@ export const UserManagementPage: React.FC = () => {
                 <option value="EEE">EEE</option>
                 <option value="MECH">MECH</option>
                 <option value="CIVIL">CIVIL</option>
+                <option value="IT">IT</option>
+                <option value="CIC">CIC</option>
+                <option value="CSO">CSO</option>
+                <option value="CSM">CSM</option>
               </select>
             </div>
           </div>

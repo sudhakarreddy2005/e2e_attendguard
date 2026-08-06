@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { Users, Search, Plus, Download, Eye, Pencil, Trash2, ChevronDown, ShieldAlert, FileSpreadsheet } from 'lucide-react';
+import { Users, Search, Plus, Download, Eye, Trash2, ChevronDown, ShieldAlert, FileSpreadsheet } from 'lucide-react';
 import { studentService } from '../services/studentService';
 import { Student } from '../types/student';
-import { Badge } from '../components/ui/Badge';
 import { StudentProfileModal } from '../components/students/StudentProfileModal';
 import { EditStudentModal } from '../components/students/EditStudentModal';
 import { ImportStudentsModal } from '../components/students/ImportStudentsModal';
+import { WebcamPhotoInput } from '../components/students/WebcamPhotoInput';
 import { PageTransition } from '../components/ui/PageTransition';
 import { EmptyState } from '../components/ui/EmptyState';
 import { SkeletonTableRow } from '../components/ui/Skeleton';
@@ -178,6 +178,12 @@ export const StudentsPage: React.FC = () => {
             <option value="ECE">ECE</option>
             <option value="EEE">EEE</option>
             <option value="MECH">MECH</option>
+            <option value="CIVIL">CIVIL</option>
+            <option value="IT">IT</option>
+            <option value="CIC">CIC</option>
+            <option value="CSO">CSO</option>
+            <option value="CSM">CSM</option>
+            <option value="AIDS">AIDS</option>
           </select>
           <select
             value={sectionFilter}
@@ -191,6 +197,7 @@ export const StudentsPage: React.FC = () => {
             <option value="A">Section A</option>
             <option value="B">Section B</option>
             <option value="C">Section C</option>
+            <option value="D">Section D</option>
           </select>
         </div>
       </div>
@@ -206,22 +213,25 @@ export const StudentsPage: React.FC = () => {
                 <th className="py-4 px-4.5">Class</th>
                 <th className="py-4 px-4.5 text-center">Violations</th>
                 <th className="py-4 px-4.5 text-center">Breakdown</th>
-                <th className="py-4 px-4.5 text-center">Status</th>
                 <th className="py-4 px-4.5 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-black/5 dark:divide-white/10 text-xs">
               {isLoading ? (
-                Array.from({ length: 6 }).map((_, i) => <SkeletonTableRow key={i} columns={7} />)
+                Array.from({ length: 6 }).map((_, i) => <SkeletonTableRow key={i} columns={6} />)
               ) : visibleStudents.length === 0 ? (
                 <tr>
-                  <td colSpan={7}>
+                  <td colSpan={6}>
                     <EmptyState icon={Users} title="No students found" subtitle="Try adjusting your search or filter criteria." />
                   </td>
                 </tr>
               ) : (
                 visibleStudents.map((s) => (
-                  <tr key={s.roll_no} className="table-row-hover even:bg-white/35 dark:even:bg-white/[0.02]">
+                  <tr
+                    key={s.roll_no}
+                    onClick={() => setSelectedStudent(s)}
+                    className="table-row-hover even:bg-white/35 dark:even:bg-white/[0.02] cursor-pointer"
+                  >
                     <td className="py-3.5 px-4.5 font-semibold text-slate-700 dark:text-slate-200">
                       <div className="flex items-center gap-3.5">
                         <div className="w-11 h-11 rounded-full bg-slate-200 dark:bg-slate-800 overflow-hidden border-2 border-white/80 dark:border-white/20 shadow-sm ring-2 ring-pink-300/30 shrink-0">
@@ -247,23 +257,27 @@ export const StudentsPage: React.FC = () => {
                         <span className="px-2 py-0.5 rounded-full bg-[#BF5AF2]/15 text-[#BF5AF2] font-bold">D: {s.dress_code_count || 0}</span>
                       </div>
                     </td>
-                    <td className="py-3.5 px-4.5 text-center">
-                      <Badge variant={s.violations_count > 3 ? 'danger' : s.violations_count > 0 ? 'warning' : 'success'} dot glow={s.violations_count > 3}>
-                        {s.violations_count > 3 ? 'High Risk' : s.violations_count > 0 ? 'Moderate' : 'Clear'}
-                      </Badge>
-                    </td>
                     <td className="py-3.5 px-4.5 text-right">
                       <div className="flex items-center justify-end gap-1">
-                        <button onClick={() => setSelectedStudent(s)} className="p-2 rounded-xl hover:bg-black/5 dark:hover:bg-white/10 text-slate-500 dark:text-slate-400 hover:text-[#007AFF] transition-colors cursor-pointer" title="View Profile">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedStudent(s);
+                          }}
+                          className="p-2 rounded-xl hover:bg-black/5 dark:hover:bg-white/10 text-slate-500 dark:text-slate-400 hover:text-[#007AFF] transition-colors cursor-pointer"
+                          title="View Profile"
+                        >
                           <Eye className="w-4 h-4" strokeWidth={2} />
                         </button>
-                        {canEditStudent && (
-                          <button onClick={() => setEditingStudent(s)} className="p-2 rounded-xl hover:bg-[#007AFF]/15 text-slate-500 dark:text-slate-400 hover:text-[#007AFF] transition-colors cursor-pointer" title="Edit Student Profile (DEO / Admin / Super Admin)">
-                            <Pencil className="w-4 h-4" strokeWidth={2} />
-                          </button>
-                        )}
                         {canDeleteStudent && (
-                          <button onClick={() => handleDeleteStudent(s)} className="p-2 rounded-xl hover:bg-[#FF453A]/15 text-[#FF453A] transition-colors cursor-pointer" title="Delete Student Record (Admin/HOD/DEO/Principal)">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteStudent(s);
+                            }}
+                            className="p-2 rounded-xl hover:bg-[#FF453A]/15 text-[#FF453A] transition-colors cursor-pointer"
+                            title="Delete Student Record (Admin/HOD/DEO/Principal)"
+                          >
                             <Trash2 className="w-4 h-4" strokeWidth={2} />
                           </button>
                         )}
@@ -321,7 +335,7 @@ export const StudentsPage: React.FC = () => {
       />
 
       {/* Register Student GlassModal */}
-      <GlassModal isOpen={showRegisterModal} onClose={() => setShowRegisterModal(false)} title="Register Student (ArcFace Vision Profile)">
+      <GlassModal isOpen={showRegisterModal} onClose={() => setShowRegisterModal(false)} title="Register Student">
         <form onSubmit={handleRegister} className="space-y-3.5 text-xs">
           <div>
             <label className="block text-slate-600 dark:text-slate-300 font-semibold mb-1">Roll Number</label>
@@ -339,6 +353,12 @@ export const StudentsPage: React.FC = () => {
                 <option value="ECE">ECE</option>
                 <option value="EEE">EEE</option>
                 <option value="MECH">MECH</option>
+                <option value="CIVIL">CIVIL</option>
+                <option value="IT">IT</option>
+                <option value="CIC">CIC</option>
+                <option value="CSO">CSO</option>
+                <option value="CSM">CSM</option>
+                <option value="AIDS">AIDS</option>
               </select>
             </div>
             <div>
@@ -347,13 +367,16 @@ export const StudentsPage: React.FC = () => {
                 <option value="A">Section A</option>
                 <option value="B">Section B</option>
                 <option value="C">Section C</option>
+                <option value="D">Section D</option>
               </select>
             </div>
           </div>
-          <div>
-            <label className="block text-slate-600 dark:text-slate-300 font-semibold mb-1">Face Registration Photo</label>
-            <input type="file" accept="image/*" onChange={(e) => setImageFile(e.target.files?.[0] || null)} className="w-full text-slate-500 dark:text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-2xl file:border-0 file:text-xs file:font-bold file:bg-black/5 dark:file:bg-white/10 file:text-slate-700 dark:file:text-white hover:file:bg-black/10" required />
-          </div>
+          <WebcamPhotoInput
+            selectedFile={imageFile}
+            onImageSelected={setImageFile}
+            label="Face Registration Photo"
+            required
+          />
           <div className="flex items-center justify-end gap-2 pt-2">
             <button type="button" onClick={() => setShowRegisterModal(false)} className="apple-btn-secondary px-4 py-2 text-xs font-semibold">Cancel</button>
             <button type="submit" disabled={isSubmitting} className="apple-btn-primary px-4 py-2 text-xs font-bold shadow-md disabled:opacity-50">{isSubmitting ? 'Registering...' : 'Register Student'}</button>

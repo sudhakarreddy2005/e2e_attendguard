@@ -1,13 +1,137 @@
-import React, { useEffect, useState, useRef } from 'react';
-import { AlertTriangle, Plus, Trash2, CheckCircle, Search, Upload, Image as ImageIcon, RefreshCw, Calendar, Filter, X } from 'lucide-react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
+import {
+  Plus,
+  Trash2,
+  Search,
+  Upload,
+  Image as ImageIcon,
+  RefreshCw,
+  Calendar,
+  Filter,
+  X,
+  LayoutGrid,
+  List,
+  Download,
+  Eye,
+  Building,
+  Cpu,
+  Clock,
+  ShieldAlert,
+  CheckCircle,
+  AlertTriangle,
+  XCircle,
+} from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { violationService } from '../services/violationService';
 import { studentService } from '../services/studentService';
-import { Violation } from '../types/violation';
-import { Badge } from '../components/ui/Badge';
+import { Violation, IncidentStatus } from '../types/violation';
 import { PageTransition } from '../components/ui/PageTransition';
 import { EmptyState } from '../components/ui/EmptyState';
 import { SkeletonTableRow } from '../components/ui/Skeleton';
 import { GlassModal } from '../components/ui/GlassModal';
+import { IncidentDetailModal, formatToIST } from '../components/violations/IncidentDetailModal';
+
+/* ─── Inline Toast Notification ───────────────────────────────────── */
+interface ToastState {
+  message: string;
+  type: 'success' | 'error' | 'info';
+  visible: boolean;
+}
+
+const InlineToast: React.FC<{ toast: ToastState; onDismiss: () => void }> = ({ toast, onDismiss }) => {
+  const iconMap = {
+    success: <CheckCircle className="w-4 h-4 text-[#30D158]" />,
+    error: <XCircle className="w-4 h-4 text-[#FF453A]" />,
+    info: <AlertTriangle className="w-4 h-4 text-[#FF9F0A]" />,
+  };
+  const bgMap = {
+    success: 'bg-[#30D158]/15 border-[#30D158]/30 text-[#30D158]',
+    error: 'bg-[#FF453A]/15 border-[#FF453A]/30 text-[#FF453A]',
+    info: 'bg-[#FF9F0A]/15 border-[#FF9F0A]/30 text-[#FF9F0A]',
+  };
+  return (
+    <AnimatePresence>
+      {toast.visible && (
+        <motion.div
+          initial={{ opacity: 0, y: -20, scale: 0.95 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          exit={{ opacity: 0, y: -20, scale: 0.95 }}
+          transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+          className={`fixed top-6 right-6 z-[100] flex items-center gap-2.5 px-4 py-3 rounded-2xl border shadow-lg backdrop-blur-xl text-xs font-bold ${bgMap[toast.type]}`}
+        >
+          {iconMap[toast.type]}
+          <span className="text-slate-800 dark:text-white">{toast.message}</span>
+          <button onClick={onDismiss} className="ml-2 p-0.5 hover:opacity-70 cursor-pointer">
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+};
+
+/* ─── Inline Confirm Dialog ───────────────────────────────────────── */
+interface ConfirmState {
+  visible: boolean;
+  message: string;
+  onConfirm: () => void;
+}
+
+const InlineConfirmDialog: React.FC<{ state: ConfirmState; onCancel: () => void }> = ({ state, onCancel }) => (
+  <AnimatePresence>
+    {state.visible && (
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        transition={{ duration: 0.2 }}
+        className="fixed inset-0 z-[90] bg-slate-950/60 backdrop-blur-sm flex items-center justify-center p-4"
+        onClick={onCancel}
+      >
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9, y: 20 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 0.95, y: 10 }}
+          transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+          className="glass-panel rounded-[24px] p-6 max-w-sm w-full shadow-2xl space-y-4"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 rounded-2xl bg-[#FF453A]/15">
+              <AlertTriangle className="w-5 h-5 text-[#FF453A]" />
+            </div>
+            <div>
+              <h4 className="text-sm font-extrabold text-slate-800 dark:text-white">Confirm Action</h4>
+              <p className="text-xs text-slate-500 font-medium mt-0.5">{state.message}</p>
+            </div>
+          </div>
+          <div className="flex items-center justify-end gap-2 pt-2">
+            <button onClick={onCancel} className="apple-btn-secondary px-4 py-2 text-xs font-semibold cursor-pointer">Cancel</button>
+            <button
+              onClick={() => { state.onConfirm(); onCancel(); }}
+              className="px-4 py-2 text-xs font-bold rounded-2xl bg-[#FF453A] text-white shadow-md hover:opacity-90 transition-opacity cursor-pointer"
+            >
+              Delete Permanently
+            </button>
+          </div>
+        </motion.div>
+      </motion.div>
+    )}
+  </AnimatePresence>
+);
+
+const STATUS_BADGE_STYLES: Record<string, string> = {
+  'Detected': 'bg-[#FF9F0A]/15 text-[#FF9F0A] border-[#FF9F0A]/30',
+  'Pending': 'bg-[#FF9F0A]/15 text-[#FF9F0A] border-[#FF9F0A]/30',
+  'Under Review': 'bg-[#007AFF]/15 text-[#007AFF] border-[#007AFF]/30',
+  'Reviewed': 'bg-[#007AFF]/15 text-[#007AFF] border-[#007AFF]/30',
+  'Verified': 'bg-purple-500/15 text-purple-500 border-purple-500/30',
+  'Action Taken': 'bg-rose-500/15 text-rose-500 border-rose-500/30',
+  'Escalated': 'bg-[#FF3B30]/15 text-[#FF3B30] border-[#FF3B30]/30',
+  'Resolved': 'bg-[#30D158]/15 text-[#30D158] border-[#30D158]/30',
+  'Closed': 'bg-slate-500/15 text-slate-400 border-slate-500/30',
+  'Dismissed': 'bg-slate-500/15 text-slate-400 border-slate-500/30',
+};
 
 const VIOLATION_TYPE_STYLES: Record<string, string> = {
   'Late Arrival': 'bg-[#FF9F0A]/15 text-[#FF9F0A] border-[#FF9F0A]/30',
@@ -19,24 +143,39 @@ export const ViolationsPage: React.FC = () => {
   const [violations, setViolations] = useState<Violation[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [search, setSearch] = useState('');
+  
+  // Default to Command Table View per user requirement
+  const [activeView, setActiveView] = useState<'feed' | 'table'>('table');
+
+  // Selected incident for Centered Modal Inspection
+  const [selectedIncident, setSelectedIncident] = useState<Violation | null>(null);
 
   // Lazy Yielding limit state (10 items per batch)
   const [displayLimit, setDisplayLimit] = useState(10);
 
-  // Filters
+  // Smart Filters
   const [typeFilter, setTypeFilter] = useState('ALL');
   const [locationFilter, setLocationFilter] = useState('ALL');
   const [deptFilter, setDeptFilter] = useState('ALL');
+  const [statusFilter, setStatusFilter] = useState('ALL');
   const [dateFilter, setDateFilter] = useState('');
 
-  // Reset lazy yield limit whenever filter criteria change
-  useEffect(() => {
-    setDisplayLimit(10);
-  }, [search, typeFilter, locationFilter, deptFilter, dateFilter]);
-
+  // Modal State
   const [showAddModal, setShowAddModal] = useState(false);
 
-  // Form states
+  // Inline Toast & Confirm Dialog (replacing browser alerts)
+  const [toast, setToast] = useState<ToastState>({ message: '', type: 'info', visible: false });
+  const [confirmState, setConfirmState] = useState<ConfirmState>({ visible: false, message: '', onConfirm: () => {} });
+
+  const showToast = useCallback((message: string, type: ToastState['type'] = 'info') => {
+    setToast({ message, type, visible: true });
+    setTimeout(() => setToast((t) => ({ ...t, visible: false })), 3500);
+  }, []);
+
+  const dismissToast = useCallback(() => setToast((t) => ({ ...t, visible: false })), []);
+  const dismissConfirm = useCallback(() => setConfirmState((c) => ({ ...c, visible: false })), []);
+
+  // Form states for manual registration
   const [rollNo, setRollNo] = useState('');
   const [vType, setVType] = useState('Late Arrival');
   const [location, setLocation] = useState('Central Block');
@@ -66,6 +205,11 @@ export const ViolationsPage: React.FC = () => {
     fetchViolations();
   }, []);
 
+  // Reset lazy yield limit whenever filter criteria change
+  useEffect(() => {
+    setDisplayLimit(10);
+  }, [search, typeFilter, locationFilter, deptFilter, statusFilter, dateFilter]);
+
   // When rollNo changes, attempt to look up DB image & name
   useEffect(() => {
     if (rollNo.trim().length >= 5) {
@@ -87,7 +231,7 @@ export const ViolationsPage: React.FC = () => {
 
   const handleFile = (file: File) => {
     if (!file.type.startsWith('image/')) {
-      alert('Please upload a valid image file (PNG, JPG, JPEG, WEBP, HEIF).');
+      showToast('Please upload a valid image file (PNG, JPG, JPEG, WEBP, HEIF).', 'error');
       return;
     }
     setUploadedFile(file);
@@ -122,27 +266,34 @@ export const ViolationsPage: React.FC = () => {
     setTypeFilter('ALL');
     setLocationFilter('ALL');
     setDeptFilter('ALL');
+    setStatusFilter('ALL');
     setDateFilter('');
   };
 
+  // Smart Natural Language & Filtered Violations Engine
   const filteredViolations = violations.filter((v) => {
-    // 1. Search text match
-    const matchesSearch =
-      v.roll_no.toLowerCase().includes(search.toLowerCase()) ||
-      (v.student_name || '').toLowerCase().includes(search.toLowerCase()) ||
-      v.location.toLowerCase().includes(search.toLowerCase()) ||
-      v.remarks.toLowerCase().includes(search.toLowerCase());
+    const sQuery = search.toLowerCase().trim();
 
-    // 2. Type filter
+    let matchesSearch = true;
+    if (sQuery) {
+      if (sQuery.includes('unresolved') || sQuery.includes('pending')) {
+        matchesSearch = ['Pending', 'Detected', 'Under Review'].includes(v.status);
+      } else {
+        matchesSearch =
+          v.roll_no.toLowerCase().includes(sQuery) ||
+          (v.student_name || '').toLowerCase().includes(sQuery) ||
+          v.location.toLowerCase().includes(sQuery) ||
+          v.remarks.toLowerCase().includes(sQuery) ||
+          (v.camera_id || '').toLowerCase().includes(sQuery) ||
+          (v._id || '').toLowerCase().includes(sQuery);
+      }
+    }
+
     const matchesType = typeFilter === 'ALL' || v.type === typeFilter;
-
-    // 3. Location filter
     const matchesLocation = locationFilter === 'ALL' || v.location.toLowerCase() === locationFilter.toLowerCase();
-
-    // 4. Dept filter
     const matchesDept = deptFilter === 'ALL' || (v.department || '').toUpperCase() === deptFilter.toUpperCase();
+    const matchesStatus = statusFilter === 'ALL' || v.status === statusFilter;
 
-    // 5. Date Calendar filter
     let matchesDate = true;
     if (dateFilter) {
       const rawDateStr = v.created_at || v.iso_date || v.date || '';
@@ -156,28 +307,41 @@ export const ViolationsPage: React.FC = () => {
       }
     }
 
-    return matchesSearch && matchesType && matchesLocation && matchesDept && matchesDate;
+    return matchesSearch && matchesType && matchesLocation && matchesDept && matchesStatus && matchesDate;
   });
 
   const yieldedViolations = filteredViolations.slice(0, displayLimit);
   const hasMoreViolations = filteredViolations.length > displayLimit;
 
   const handleDelete = async (id: string) => {
-    if (!window.confirm('Delete this violation record?')) return;
-    try {
-      await violationService.deleteViolation(id);
-      fetchViolations();
-    } catch {
-      alert('Failed to delete');
-    }
+    setConfirmState({
+      visible: true,
+      message: 'Delete this incident record permanently from GuardDB? This action cannot be undone.',
+      onConfirm: async () => {
+        try {
+          await violationService.deleteViolation(id);
+          if (selectedIncident?._id === id) {
+            setSelectedIncident(null);
+          }
+          fetchViolations();
+          showToast('Incident record deleted successfully.', 'success');
+        } catch {
+          showToast('Failed to delete incident record.', 'error');
+        }
+      },
+    });
   };
 
-  const handleUpdateStatus = async (id: string, newStatus: string) => {
+  const handleUpdateStatus = async (id: string, newStatus: IncidentStatus) => {
     try {
       await violationService.updateStatus(id, newStatus);
       fetchViolations();
+      if (selectedIncident && selectedIncident._id === id) {
+        setSelectedIncident({ ...selectedIncident, status: newStatus });
+      }
+      showToast(`Status updated to "${newStatus}".`, 'success');
     } catch {
-      alert('Failed to update');
+      showToast('Failed to update incident status.', 'error');
     }
   };
 
@@ -192,6 +356,7 @@ export const ViolationsPage: React.FC = () => {
         department: dept,
         section,
         remarks: remarks || (uploadedFile ? 'Uploaded image incident log' : 'Manual entry'),
+        captured_image: uploadedImagePreview || undefined,
       });
       setShowAddModal(false);
       setRollNo('');
@@ -200,56 +365,119 @@ export const ViolationsPage: React.FC = () => {
       setUploadedImagePreview(null);
       setDbStudentImage(null);
       fetchViolations();
+      showToast('Campus incident logged successfully.', 'success');
     } catch (err: any) {
-      alert(err.response?.data?.error?.message || 'Creation failed');
+      showToast(err.response?.data?.error?.message || 'Incident creation failed.', 'error');
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const isFiltered = search || typeFilter !== 'ALL' || locationFilter !== 'ALL' || deptFilter !== 'ALL' || dateFilter !== '';
+  const exportCSV = () => {
+    const headers = 'Incident ID,Roll No,Student Name,Type,Location,Department,Status,Date\n';
+    const rows = filteredViolations
+      .map(
+        (v) =>
+          `"${v._id}","${v.roll_no}","${v.student_name || ''}","${v.type}","${v.location}","${v.department}","${v.status}","${v.created_at || v.date || ''}"`
+      )
+      .join('\n');
+    const blob = new Blob([headers + rows], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `Incident_Report_${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+  };
+
+  const isFiltered =
+    search ||
+    typeFilter !== 'ALL' ||
+    locationFilter !== 'ALL' ||
+    deptFilter !== 'ALL' ||
+    statusFilter !== 'ALL' ||
+    dateFilter !== '';
 
   return (
-    <PageTransition className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-xl font-bold text-slate-700 dark:text-slate-200">Violation Incident Log</h2>
-          <p className="text-xs text-slate-500 dark:text-slate-400 font-medium mt-0.5">
-            Showing {yieldedViolations.length} of {filteredViolations.length} incident records ({violations.length} total in GuardDB)
-          </p>
+    <PageTransition className="space-y-5">
+      {/* Inline Toast & Confirm Dialog */}
+      <InlineToast toast={toast} onDismiss={dismissToast} />
+      <InlineConfirmDialog state={confirmState} onCancel={dismissConfirm} />
+      {/* Action Controls & View Switcher Bar */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          {/* View Switcher Tabs */}
+          <div className="p-1 rounded-2xl bg-black/5 dark:bg-white/10 border border-black/5 dark:border-white/10 flex items-center gap-1">
+            <button
+              onClick={() => setActiveView('table')}
+              className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                activeView === 'table'
+                  ? 'bg-white dark:bg-slate-800 text-[#007AFF] shadow-sm'
+                  : 'text-slate-500 hover:text-slate-800 dark:hover:text-white'
+              }`}
+            >
+              <List className="w-3.5 h-3.5" /> Command Table
+            </button>
+            <button
+              onClick={() => setActiveView('feed')}
+              className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                activeView === 'feed'
+                  ? 'bg-white dark:bg-slate-800 text-[#007AFF] shadow-sm'
+                  : 'text-slate-500 hover:text-slate-800 dark:hover:text-white'
+              }`}
+            >
+              <LayoutGrid className="w-3.5 h-3.5" /> Live Feed
+            </button>
+          </div>
+
+          <span className="text-xs text-slate-500 font-medium hidden sm:inline">
+            Showing {yieldedViolations.length} of {filteredViolations.length} records
+          </span>
         </div>
-        <button
-          onClick={() => setShowAddModal(true)}
-          className="apple-btn-primary flex items-center gap-2 px-4 py-2.5 text-xs font-bold shadow-md self-start sm:self-auto"
-        >
-          <Plus className="w-4 h-4 text-white" strokeWidth={2} /> Log New Incident
-        </button>
+
+        <div className="flex items-center gap-2.5">
+          <button
+            onClick={exportCSV}
+            className="apple-btn-secondary flex items-center gap-2 px-3.5 py-2 text-xs font-semibold cursor-pointer"
+          >
+            <Download className="w-4 h-4 text-[#007AFF]" /> Export CSV
+          </button>
+
+          <button
+            onClick={() => setShowAddModal(true)}
+            className="apple-btn-primary flex items-center gap-2 px-4 py-2 text-xs font-bold shadow-md cursor-pointer"
+          >
+            <Plus className="w-4 h-4 text-white" strokeWidth={2.5} /> Log Incident
+          </button>
+        </div>
       </div>
 
-      {/* Advanced Search & Multi-Filter Control Bar with Calendar Date Picker */}
+      {/* Advanced Search & Smart Filter Control Bar */}
       <div className="glass-panel p-4 rounded-[24px] space-y-3 shadow-md border border-white/60 dark:border-white/10">
-        <div className="flex items-center gap-2 text-xs font-bold text-slate-700 dark:text-slate-200">
-          <Filter className="w-4 h-4 text-[#007AFF]" strokeWidth={2} />
-          <span>Incident Filter Controls</span>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2 text-xs font-extrabold text-slate-800 dark:text-white">
+            <Filter className="w-4 h-4 text-[#007AFF]" strokeWidth={2} />
+            <span>Incident Smart Filters</span>
+          </div>
+
           {isFiltered && (
             <button
               onClick={clearAllFilters}
-              className="ml-auto text-[11px] font-semibold text-[#FF453A] hover:underline flex items-center gap-1"
+              className="text-[11px] font-bold text-[#FF453A] hover:underline flex items-center gap-1 cursor-pointer"
             >
-              <X className="w-3.5 h-3.5" /> Clear Filters
+              <X className="w-3.5 h-3.5" /> Reset Filters
             </button>
           )}
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 text-xs">
-          {/* Search Bar */}
-          <div className="relative sm:col-span-2 lg:col-span-1">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3 text-xs">
+          {/* Global Search */}
+          <div className="relative lg:col-span-2">
             <input
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search student / roll no..."
-              className="w-full pl-9 pr-3 py-2 rounded-2xl bg-white/70 dark:bg-white/10 border border-slate-200 dark:border-white/10 text-xs text-slate-700 dark:text-slate-200 placeholder-slate-400 focus:outline-none focus:border-[#007AFF]"
+              placeholder="Search student, roll, ID, or remarks..."
+              className="w-full pl-9 pr-4 py-2 rounded-2xl bg-white/70 dark:bg-white/10 border border-slate-200 dark:border-white/10 text-xs text-slate-700 dark:text-slate-200 placeholder-slate-400 focus:outline-none focus:border-[#007AFF] font-medium"
             />
             <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" strokeWidth={2} />
           </div>
@@ -261,12 +489,11 @@ export const ViolationsPage: React.FC = () => {
               value={dateFilter}
               onChange={(e) => setDateFilter(e.target.value)}
               className="w-full pl-9 pr-3 py-2 rounded-2xl bg-white/70 dark:bg-white/10 border border-slate-200 dark:border-white/10 text-xs font-semibold text-slate-700 dark:text-slate-200 focus:outline-none focus:border-[#007AFF]"
-              title="Filter by Date"
             />
             <Calendar className="w-4 h-4 text-slate-400 absolute left-3 top-2.5 pointer-events-none" strokeWidth={2} />
           </div>
 
-          {/* Violation Type Dropdown */}
+          {/* Violation Type Filter */}
           <div>
             <select
               value={typeFilter}
@@ -280,23 +507,24 @@ export const ViolationsPage: React.FC = () => {
             </select>
           </div>
 
-          {/* Location Dropdown */}
+          {/* Workflow Status Filter */}
           <div>
             <select
-              value={locationFilter}
-              onChange={(e) => setLocationFilter(e.target.value)}
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
               className="w-full px-3 py-2 rounded-2xl bg-white/70 dark:bg-white/10 border border-slate-200 dark:border-white/10 text-xs font-semibold text-slate-700 dark:text-slate-200 focus:outline-none focus:border-[#007AFF]"
             >
-              <option value="ALL">All Locations</option>
-              <option value="Central Block">Central Block</option>
-              <option value="A Block">A Block</option>
-              <option value="B Block">B Block</option>
-              <option value="C Block">C Block</option>
-              <option value="D Block">D Block</option>
+              <option value="ALL">All Statuses</option>
+              <option value="Detected">Detected / Pending</option>
+              <option value="Under Review">Under Review</option>
+              <option value="Verified">Verified</option>
+              <option value="Action Taken">Action Taken</option>
+              <option value="Closed">Closed</option>
+              <option value="Dismissed">Dismissed</option>
             </select>
           </div>
 
-          {/* Department Dropdown */}
+          {/* Department Filter */}
           <div>
             <select
               value={deptFilter}
@@ -308,100 +536,270 @@ export const ViolationsPage: React.FC = () => {
               <option value="ECE">ECE</option>
               <option value="EEE">EEE</option>
               <option value="MECH">MECH</option>
+              <option value="CIVIL">CIVIL</option>
+              <option value="IT">IT</option>
+              <option value="CIC">CIC</option>
+              <option value="CSO">CSO</option>
+              <option value="CSM">CSM</option>
+              <option value="AIDS">AIDS</option>
             </select>
           </div>
         </div>
       </div>
 
-      {/* Violations Table */}
-      <div className="glass-panel rounded-[24px] overflow-hidden shadow-lg border border-white/60 dark:border-white/10">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="border-b border-black/10 dark:border-white/10 bg-white/50 dark:bg-white/[0.04] text-[11px] font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300">
-                <th className="py-4 px-4.5">Student</th>
-                <th className="py-4 px-4.5">Violation Type</th>
-                <th className="py-4 px-4.5">Location</th>
-                <th className="py-4 px-4.5">Date & Time</th>
-                <th className="py-4 px-4.5">Remarks</th>
-                <th className="py-4 px-4.5 text-center">Status</th>
-                <th className="py-4 px-4.5 text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-black/5 dark:divide-white/10 text-xs">
-              {isLoading ? (
-                Array.from({ length: 5 }).map((_, i) => <SkeletonTableRow key={i} columns={7} />)
-              ) : yieldedViolations.length === 0 ? (
-                <tr>
-                  <td colSpan={7}>
-                    <EmptyState icon={AlertTriangle} title="No violations found" subtitle="No incident records match your selected date or criteria." />
-                  </td>
-                </tr>
-              ) : (
-                yieldedViolations.map((v) => (
-                  <tr key={v._id} className="table-row-hover even:bg-white/35 dark:even:bg-white/[0.02]">
-                    <td className="py-3.5 px-4.5">
-                      <div className="font-semibold text-slate-700 dark:text-slate-200">{v.student_name || 'Student'}</div>
-                      <div className="text-[11px] font-mono text-[#007AFF] font-bold">{v.roll_no}</div>
-                    </td>
-                    <td className="py-3.5 px-4.5">
-                      <span className={`px-2.5 py-1 rounded-full text-[11px] font-semibold border ${VIOLATION_TYPE_STYLES[v.type] || 'bg-black/5 text-slate-600 border-black/10'}`}>
+      {/* Main View Area: Feed vs Table */}
+      {activeView === 'feed' ? (
+        /* Real-Time Live Incident Feed View with 4 to 5 cards per row grid */
+        <div className="space-y-4">
+          {isLoading ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3.5">
+              {Array.from({ length: 10 }).map((_, i) => (
+                <div key={i} className="h-44 rounded-[22px] glass-panel animate-pulse bg-slate-200/50 dark:bg-white/5" />
+              ))}
+            </div>
+          ) : yieldedViolations.length === 0 ? (
+            <div className="glass-panel p-10 rounded-[28px] text-center">
+              <EmptyState icon={ShieldAlert} title="No Incidents Found" subtitle="No incident records match your selected filter criteria." />
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3.5">
+              {yieldedViolations.map((v, index) => {
+                const confPercent = v.confidence
+                  ? (v.confidence > 1 ? v.confidence.toFixed(1) : (v.confidence * 100).toFixed(1))
+                  : null;
+                const statusStyle = STATUS_BADGE_STYLES[v.status] || 'bg-slate-500/15 text-slate-400 border-slate-500/30';
+                const vTypeStyle = VIOLATION_TYPE_STYLES[v.type] || 'bg-black/5 text-slate-600 border-black/10';
+                const avatarUrl = v.captured_image || studentService.getStudentImage(v.roll_no);
+
+                return (
+                  <motion.div
+                    key={v._id}
+                    initial={{ opacity: 0, y: 16, scale: 0.97 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    transition={{ delay: index * 0.04, duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
+                    whileHover={{ y: -3, boxShadow: '0 12px 30px rgba(0,122,255,0.12)' }}
+                    onClick={() => setSelectedIncident(v)}
+                    className="glass-panel p-4 rounded-[22px] border border-white/60 dark:border-white/10 shadow-sm cursor-pointer space-y-3 relative group flex flex-col justify-between"
+                  >
+                    {/* Top Bar: Type Pill & Status Badge */}
+                    <div className="flex items-center justify-between gap-1">
+                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border truncate ${vTypeStyle}`}>
                         {v.type}
                       </span>
-                    </td>
-                    <td className="py-3.5 px-4.5 text-slate-600 dark:text-slate-300 font-medium">{v.location}</td>
-                    <td className="py-3.5 px-4.5 text-slate-500 dark:text-slate-400 font-mono text-[11px]">
-                      {v.created_at ? new Date(v.created_at).toLocaleDateString() : v.date || 'Today'}
-                    </td>
-                    <td className="py-3.5 px-4.5 text-slate-500 dark:text-slate-400 max-w-xs truncate">{v.remarks}</td>
-                    <td className="py-3.5 px-4.5 text-center">
-                      <Badge variant={v.status === 'Resolved' ? 'success' : v.status === 'Reviewed' ? 'info' : 'warning'} dot>
+                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold border ${statusStyle}`}>
                         {v.status}
-                      </Badge>
-                    </td>
-                    <td className="py-3.5 px-4.5 text-right">
-                      <div className="flex items-center justify-end gap-1">
-                        {v.status === 'Pending' && (
-                          <button onClick={() => handleUpdateStatus(v._id, 'Resolved')} className="p-1.5 rounded-xl hover:bg-[#30D158]/15 text-[#30D158] transition-colors" title="Mark Resolved">
-                            <CheckCircle className="w-4 h-4" strokeWidth={2} />
-                          </button>
-                        )}
-                        <button onClick={() => handleDelete(v._id)} className="p-1.5 rounded-xl hover:bg-[#FF453A]/15 text-[#FF453A] transition-colors" title="Delete">
-                          <Trash2 className="w-4 h-4" strokeWidth={2} />
-                        </button>
+                      </span>
+                    </div>
+
+                    {/* Student Avatar & Identification */}
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full overflow-hidden border border-white/80 dark:border-white/20 shadow-xs shrink-0">
+                        <img
+                          src={avatarUrl}
+                          alt={v.student_name || v.roll_no}
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(v.student_name || v.roll_no)}&background=FFB6C1&color=700&bold=true&rounded=true`;
+                          }}
+                        />
                       </div>
+
+                      <div className="space-y-0.5 overflow-hidden">
+                        <h3 className="font-extrabold text-slate-800 dark:text-white truncate text-xs">
+                          {v.student_name || 'Student'}
+                        </h3>
+                        <p className="text-[11px] font-mono font-bold text-[#007AFF] truncate">
+                          {v.roll_no}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Telemetry Block: Clean Key-Value Layout */}
+                    <div className="p-2.5 rounded-xl bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/10 text-[11px] space-y-1.5">
+                      {/* Location Row */}
+                      <div className="flex items-center justify-between text-slate-600 dark:text-slate-300">
+                        <span className="text-[10px] text-slate-400 font-semibold">Location</span>
+                        <span className="font-bold truncate max-w-[110px] flex items-center gap-1">
+                          <Building className="w-3 h-3 text-purple-400 shrink-0" />
+                          {v.location}
+                        </span>
+                      </div>
+
+                      {/* Confidence Row */}
+                      <div className="flex items-center justify-between text-[#30D158]">
+                        <span className="text-[10px] text-slate-400 font-semibold">Vector Match</span>
+                        <span className="font-extrabold flex items-center gap-1">
+                          <Cpu className="w-3 h-3 shrink-0" />
+                          {confPercent ? `${confPercent}%` : 'Verified'}
+                        </span>
+                      </div>
+
+                      {/* Timestamp Row */}
+                      <div className="flex items-center justify-between text-slate-500 dark:text-slate-400">
+                        <span className="text-[10px] text-slate-400 font-semibold">Time</span>
+                        <span className="font-mono font-bold flex items-center gap-1">
+                          <Clock className="w-3 h-3 shrink-0" />
+                          {v.date || formatToIST(v.created_at)}
+                        </span>
+                      </div>
+                    </div>
+                  </motion.div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Lazy Yielding Controls */}
+          {hasMoreViolations && (
+            <div className="flex flex-col items-center justify-center p-4 glass-panel rounded-[22px] space-y-2">
+              <p className="text-xs text-slate-500 font-medium">
+                Showing <span className="font-bold text-slate-700 dark:text-slate-200">{yieldedViolations.length}</span> of <span className="font-bold text-slate-700 dark:text-slate-200">{filteredViolations.length}</span> incident records
+              </p>
+              <button
+                onClick={() => setDisplayLimit((prev) => prev + 10)}
+                className="apple-btn-secondary px-6 py-2.5 text-xs font-bold shadow-sm hover:scale-[1.02] transition-all flex items-center gap-2 cursor-pointer"
+              >
+                <RefreshCw className="w-3.5 h-3.5 text-[#007AFF]" />
+                Load Next 10 Incidents
+              </button>
+            </div>
+          )}
+        </div>
+      ) : (
+        /* Default High-Density Command Table View */
+        <div className="glass-panel rounded-[26px] overflow-hidden shadow-lg border border-white/60 dark:border-white/10 space-y-2">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="border-b border-black/10 dark:border-white/10 bg-white/50 dark:bg-white/[0.04] text-[11px] font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300">
+                  <th className="py-4 px-4.5">Student</th>
+                  <th className="py-4 px-4.5">Violation Category</th>
+                  <th className="py-4 px-4.5">Zone Location</th>
+                  <th className="py-4 px-4.5">Timestamp</th>
+                  <th className="py-4 px-4.5 text-center">Status</th>
+                  <th className="py-4 px-4.5 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-black/5 dark:divide-white/10 text-xs">
+                {isLoading ? (
+                  Array.from({ length: 5 }).map((_, i) => <SkeletonTableRow key={i} columns={6} />)
+                ) : yieldedViolations.length === 0 ? (
+                  <tr>
+                    <td colSpan={6}>
+                      <EmptyState icon={ShieldAlert} title="No incidents found" subtitle="No incident records match your selected filter criteria." />
                     </td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+                ) : (
+                  yieldedViolations.map((v, index) => {
+                    const statusStyle = STATUS_BADGE_STYLES[v.status] || 'bg-slate-500/15 text-slate-400 border-slate-500/30';
+                    const studentAvatar = v.captured_image || studentService.getStudentImage(v.roll_no);
 
-        {/* Lazy Yielding Load More Controls */}
-        {hasMoreViolations && (
-          <div className="flex flex-col items-center justify-center p-4 border-t border-black/5 dark:border-white/10 space-y-2 bg-white/40 dark:bg-white/[0.02]">
-            <p className="text-xs text-slate-500 font-medium">
-              Showing <span className="font-bold text-slate-700 dark:text-slate-200">{yieldedViolations.length}</span> of <span className="font-bold text-slate-700 dark:text-slate-200">{filteredViolations.length}</span> incident records
-            </p>
-            <button
-              onClick={() => setDisplayLimit((prev) => prev + 10)}
-              className="apple-btn-secondary px-6 py-2 text-xs font-bold shadow-sm hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center gap-2"
-            >
-              <RefreshCw className="w-3.5 h-3.5 text-[#007AFF]" />
-              Load Next 10 Incidents
-            </button>
+                    return (
+                      <motion.tr
+                        key={v._id}
+                        initial={{ opacity: 0, x: -12 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: index * 0.03, duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+                        onClick={() => setSelectedIncident(v)}
+                        className="table-row-hover even:bg-white/35 dark:even:bg-white/[0.02] cursor-pointer"
+                      >
+                        <td className="py-3 px-4.5">
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-full overflow-hidden border border-black/10 dark:border-white/20 shadow-sm shrink-0 bg-slate-200 dark:bg-slate-800">
+                              <img
+                                src={studentAvatar}
+                                alt={v.student_name || v.roll_no}
+                                className="w-full h-full object-cover"
+                                onError={(e) => {
+                                  e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(v.student_name || v.roll_no)}&background=007AFF&color=fff&bold=true`;
+                                }}
+                              />
+                            </div>
+                            <div>
+                              <div className="font-bold text-slate-800 dark:text-slate-100">{v.student_name || 'Student'}</div>
+                              <div className="text-[11px] font-mono text-[#007AFF] font-extrabold">{v.roll_no}</div>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="py-3.5 px-4.5">
+                          <span className={`px-2.5 py-1 rounded-full text-[11px] font-bold border ${VIOLATION_TYPE_STYLES[v.type] || 'bg-black/5 text-slate-600 border-black/10'}`}>
+                            {v.type}
+                          </span>
+                        </td>
+                        <td className="py-3.5 px-4.5 font-medium text-slate-600 dark:text-slate-300">
+                          {v.location}
+                        </td>
+                         <td className="py-3.5 px-4.5 text-slate-500 dark:text-slate-400 font-mono text-[11px]">
+                          {v.date || formatToIST(v.created_at)}
+                        </td>
+                        <td className="py-3.5 px-4.5 text-center">
+                          <span className={`px-2.5 py-1 rounded-full text-[11px] font-extrabold border ${statusStyle}`}>
+                            {v.status}
+                          </span>
+                        </td>
+                        <td className="py-3.5 px-4.5 text-right">
+                          <div className="flex items-center justify-end gap-1">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedIncident(v);
+                              }}
+                              className="p-2 rounded-xl hover:bg-black/5 dark:hover:bg-white/10 text-slate-500 hover:text-[#007AFF] transition-colors cursor-pointer"
+                              title="Inspect Incident Details"
+                            >
+                              <Eye className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDelete(v._id);
+                              }}
+                              className="p-2 rounded-xl hover:bg-[#FF453A]/15 text-[#FF453A] transition-colors cursor-pointer"
+                              title="Delete Incident Record"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </td>
+                      </motion.tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
           </div>
-        )}
-      </div>
 
-      {/* Log Violation Modal */}
-      <GlassModal isOpen={showAddModal} onClose={() => setShowAddModal(false)} title="Log Incident with Image Verification" maxWidth="max-w-xl">
+          {/* Lazy Yielding Load More Controls */}
+          {hasMoreViolations && (
+            <div className="flex flex-col items-center justify-center p-4 border-t border-black/5 dark:border-white/10 space-y-2 bg-white/40 dark:bg-white/[0.02]">
+              <p className="text-xs text-slate-500 font-medium">
+                Showing <span className="font-bold text-slate-700 dark:text-slate-200">{yieldedViolations.length}</span> of <span className="font-bold text-slate-700 dark:text-slate-200">{filteredViolations.length}</span> incident records
+              </p>
+              <button
+                onClick={() => setDisplayLimit((prev) => prev + 10)}
+                className="apple-btn-secondary px-6 py-2.5 text-xs font-bold shadow-sm hover:scale-[1.02] transition-all flex items-center gap-2 cursor-pointer"
+              >
+                <RefreshCw className="w-3.5 h-3.5 text-[#007AFF]" />
+                Load Next 10 Incidents
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Centered Incident Details Modal */}
+      <IncidentDetailModal
+        incident={selectedIncident}
+        onClose={() => setSelectedIncident(null)}
+        onUpdateStatus={handleUpdateStatus}
+      />
+
+      {/* Log Violation Modal (Preserves Drag & Drop / Side-by-side comparison) */}
+      <GlassModal isOpen={showAddModal} onClose={() => setShowAddModal(false)} title="Log Campus Incident with Image Verification" maxWidth="max-w-xl">
         <form onSubmit={handleCreate} className="space-y-4 text-xs">
-          {/* Drag and Drop Zone */}
           <div>
             <label className="block text-slate-600 dark:text-slate-300 font-semibold mb-1.5">
-              Upload Image (Supports PNG, JPG, JPEG, WEBP, HEIF)
+              Upload Incident Photo (Supports PNG, JPG, JPEG, WEBP, HEIF)
             </label>
             <div
               onDragEnter={handleDrag}
@@ -428,18 +826,16 @@ export const ViolationsPage: React.FC = () => {
             </div>
           </div>
 
-          {/* Side-by-Side Comparison Preview */}
           {(uploadedImagePreview || dbStudentImage) && (
             <div className="p-3.5 rounded-2xl bg-white/60 dark:bg-white/5 border border-slate-200 dark:border-white/10 space-y-2">
               <div className="flex items-center justify-between">
                 <span className="font-bold text-slate-700 dark:text-slate-200 flex items-center gap-1.5">
-                  <ImageIcon className="w-4 h-4 text-[#007AFF]" /> Side-by-Side Face Verification
+                  <ImageIcon className="w-4 h-4 text-[#007AFF]" /> Side-by-Side Verification
                 </span>
                 {matchedStudentName && <span className="text-[11px] font-bold text-[#30D158]">{matchedStudentName}</span>}
               </div>
 
               <div className="grid grid-cols-2 gap-3 pt-1">
-                {/* Uploaded Image */}
                 <div className="flex flex-col items-center">
                   <span className="text-[10px] font-semibold text-slate-400 mb-1">Uploaded Incident Photo</span>
                   <div className="w-28 h-28 rounded-xl overflow-hidden bg-slate-200 dark:bg-slate-800 border border-slate-300 dark:border-white/20 shadow-xs flex items-center justify-center">
@@ -451,7 +847,6 @@ export const ViolationsPage: React.FC = () => {
                   </div>
                 </div>
 
-                {/* DB Enrolled Image */}
                 <div className="flex flex-col items-center">
                   <span className="text-[10px] font-semibold text-slate-400 mb-1">Database Enrolled Photo</span>
                   <div className="w-28 h-28 rounded-xl overflow-hidden bg-slate-200 dark:bg-slate-800 border border-slate-300 dark:border-white/20 shadow-xs flex items-center justify-center">
@@ -473,7 +868,6 @@ export const ViolationsPage: React.FC = () => {
             </div>
           )}
 
-          {/* Form Fields */}
           <div>
             <label className="block text-slate-600 dark:text-slate-300 font-semibold mb-1">Student Roll Number</label>
             <input
@@ -488,7 +882,7 @@ export const ViolationsPage: React.FC = () => {
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-slate-600 dark:text-slate-300 font-semibold mb-1">Violation Type</label>
+              <label className="block text-slate-600 dark:text-slate-300 font-semibold mb-1">Violation Category</label>
               <select
                 value={vType}
                 onChange={(e) => setVType(e.target.value)}
@@ -496,16 +890,21 @@ export const ViolationsPage: React.FC = () => {
               >
                 <option value="Late Arrival">Late Arrival</option>
                 <option value="Dress Code">Dress Code</option>
-                <option value="Bunk">Bunk</option>
+                <option value="Bunk">Bunk Class</option>
+                <option value="Unauthorized Access">Unauthorized Access</option>
+                <option value="ID Missing">ID Badge Missing</option>
               </select>
             </div>
             <div>
-              <label className="block text-slate-600 dark:text-slate-300 font-semibold mb-1">Location</label>
+              <label className="block text-slate-600 dark:text-slate-300 font-semibold mb-1">Zone Location</label>
               <select
                 value={location}
                 onChange={(e) => setLocation(e.target.value)}
                 className="w-full px-3.5 py-2.5 rounded-2xl bg-white/60 dark:bg-white/10 border border-black/10 dark:border-white/10 text-slate-700 dark:text-white font-semibold"
               >
+                <option value="Main Gate">Main Gate</option>
+                <option value="Playground">Playground</option>
+                <option value="OAT">OAT (Open Air Theatre)</option>
                 <option value="Central Block">Central Block</option>
                 <option value="A Block">A Block</option>
                 <option value="B Block">B Block</option>
@@ -516,13 +915,71 @@ export const ViolationsPage: React.FC = () => {
           </div>
 
           <div>
-            <label className="block text-slate-600 dark:text-slate-300 font-semibold mb-1">Remarks</label>
+            <div className="flex items-center justify-between mb-1">
+              <label className="block text-slate-600 dark:text-slate-300 font-semibold">Remarks & Details</label>
+              <span className="text-[10px] text-slate-400 font-medium">Click quick remark to fill</span>
+            </div>
             <textarea
               value={remarks}
               onChange={(e) => setRemarks(e.target.value)}
-              placeholder="Add details..."
-              className="w-full px-3.5 py-2 rounded-2xl bg-white/60 dark:bg-white/10 border border-black/10 dark:border-white/10 text-slate-700 dark:text-white focus:outline-none focus:border-[#007AFF] h-16"
+              placeholder={`Select quick remarks below for ${vType} or enter details...`}
+              className="w-full px-3.5 py-2 rounded-2xl bg-white/60 dark:bg-white/10 border border-black/10 dark:border-white/10 text-slate-700 dark:text-white focus:outline-none focus:border-[#007AFF] h-16 text-xs"
             />
+            {/* Dynamic Preset Remarks Chips combining Location & Violation Type */}
+            <div className="flex flex-wrap gap-1.5 mt-2">
+              {((loc: string, vt: string) => {
+                const locName = loc === 'OAT' ? 'OAT (Open Air Theatre)' : loc;
+                if (vt === 'Late Arrival') {
+                  return [
+                    `Late Arrival at ${locName}`,
+                    `Late Arrival at ${locName} after 9:00 AM`,
+                    `Delayed entry scan at ${locName}`,
+                    `Repeated late entry flag at ${locName}`,
+                  ];
+                }
+                if (vt === 'Dress Code') {
+                  return [
+                    `Dress Code Violation at ${locName}`,
+                    `Improper uniform at ${locName}`,
+                    `Missing blazer/shirt at ${locName}`,
+                    `Formal grooming non-compliance at ${locName}`,
+                  ];
+                }
+                if (vt === 'Bunk' || vt === 'Bunk Class') {
+                  return [
+                    `Bunking Class - loitering near ${locName}`,
+                    `Found at ${locName} during lecture hours`,
+                    `Unapproved absence near ${locName}`,
+                    `Gathering near ${locName} during lab hour`,
+                  ];
+                }
+                if (vt === 'ID Missing' || vt === 'No ID Card') {
+                  return [
+                    `No ID Card at ${locName}`,
+                    `Failed ID scan at ${locName}`,
+                    `Temporary pass issued at ${locName}`,
+                  ];
+                }
+                return [
+                  `Unauthorized movement near ${locName}`,
+                  `Unapproved exit attempt at ${locName}`,
+                  `Restricted zone flag at ${locName}`,
+                ];
+              })(location, vType).map((preset) => (
+                <button
+                  key={preset}
+                  type="button"
+                  onClick={() => setRemarks(preset)}
+                  className={`px-2.5 py-1 rounded-xl text-[10px] font-semibold transition-all cursor-pointer border ${
+                    remarks === preset
+                      ? 'bg-[#007AFF]/20 text-[#007AFF] border-[#007AFF]/40 font-bold'
+                      : 'bg-black/5 dark:bg-white/10 hover:bg-[#007AFF]/15 hover:text-[#007AFF] text-slate-600 dark:text-slate-300 border-black/5 dark:border-white/10'
+                  }`}
+                >
+                  {preset}
+                </button>
+              ))}
+            </div>
           </div>
 
           <div className="flex items-center justify-end gap-2 pt-2">
@@ -530,7 +987,7 @@ export const ViolationsPage: React.FC = () => {
               Cancel
             </button>
             <button type="submit" disabled={isSubmitting} className="apple-btn-primary px-4 py-2 text-xs font-bold shadow-md disabled:opacity-50">
-              {isSubmitting ? 'Logging...' : 'Log Violation Incident'}
+              {isSubmitting ? 'Logging...' : 'Log Campus Incident'}
             </button>
           </div>
         </form>

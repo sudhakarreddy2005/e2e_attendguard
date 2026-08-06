@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Pencil, X, Clock, BarChart2, PieChart as PieChartIcon, ShieldAlert } from 'lucide-react';
+import { Pencil, X, Clock, BarChart2, PieChart as PieChartIcon, ShieldAlert, ChevronDown } from 'lucide-react';
 import { Student, StudentAnalytics } from '../../types/student';
 import { studentService } from '../../services/studentService';
 import { Badge } from '../ui/Badge';
@@ -42,11 +42,13 @@ export const StudentProfileModal: React.FC<StudentProfileModalProps> = ({ studen
   const [analytics, setAnalytics] = useState<StudentAnalytics | null>(null);
   const [semTotals, setSemTotals] = useState<Record<string, number>>({});
   const [isLoading, setIsLoading] = useState(false);
+  const [timelineLimit, setTimelineLimit] = useState<number>(5);
   const { isDark } = useTheme();
 
   useEffect(() => {
     if (student) {
       setIsLoading(true);
+      setTimelineLimit(5);
       studentService
         .getStudentAnalytics(student.roll_no, selectedSem)
         .then((data) => {
@@ -106,6 +108,9 @@ export const StudentProfileModal: React.FC<StudentProfileModalProps> = ({ studen
       selectedSem === (student.current_semester || '3-2') ? student.violations_count : 0
     )
   );
+
+  const timelineItems = analytics?.timeline || [];
+  const visibleTimeline = timelineItems.slice(0, timelineLimit);
 
   return (
     <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-xl flex items-center justify-center p-4">
@@ -347,7 +352,7 @@ export const StudentProfileModal: React.FC<StudentProfileModalProps> = ({ studen
             </div>
           </div>
 
-          {/* Timeline History */}
+          {/* Timeline History with Lazy Loading */}
           <div className="p-5 rounded-[24px] bg-white/70 dark:bg-white/[0.04] border border-pink-200/50 dark:border-white/10 shadow-md">
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-200 flex items-center gap-2">
@@ -355,7 +360,7 @@ export const StudentProfileModal: React.FC<StudentProfileModalProps> = ({ studen
                 Semester {selectedSem} Incident Trail
               </h3>
               <span className="text-[11px] text-slate-400 font-semibold">
-                {analytics?.timeline?.length || 0} Incident Records
+                Showing {visibleTimeline.length} of {timelineItems.length} Incident Records
               </span>
             </div>
 
@@ -363,9 +368,9 @@ export const StudentProfileModal: React.FC<StudentProfileModalProps> = ({ studen
               <p className="text-xs text-slate-400 font-medium py-2">Loading Sem {selectedSem} violations...</p>
             )}
 
-            {!isLoading && analytics?.timeline && analytics.timeline.length > 0 ? (
+            {!isLoading && visibleTimeline.length > 0 ? (
               <div className="space-y-2">
-                {analytics.timeline.map((item) => (
+                {visibleTimeline.map((item) => (
                   <div
                     key={item.id}
                     className="p-3.5 rounded-2xl bg-white/60 dark:bg-white/5 border border-slate-200/60 dark:border-white/10 flex items-center justify-between text-xs"
@@ -389,11 +394,26 @@ export const StudentProfileModal: React.FC<StudentProfileModalProps> = ({ studen
                     </div>
                   </div>
                 ))}
+
+                {timelineItems.length > visibleTimeline.length && (
+                  <div className="pt-2 text-center">
+                    <button
+                      type="button"
+                      onClick={() => setTimelineLimit((prev) => prev + 5)}
+                      className="px-4 py-2 rounded-xl bg-white/80 dark:bg-white/10 hover:bg-black/5 dark:hover:bg-white/15 text-slate-700 dark:text-slate-200 text-xs font-bold border border-black/10 dark:border-white/10 inline-flex items-center gap-1.5 cursor-pointer transition-colors"
+                    >
+                      <ChevronDown className="w-3.5 h-3.5 text-[#007AFF]" strokeWidth={2} />
+                      Load More Incidents ({timelineItems.length - visibleTimeline.length} remaining)
+                    </button>
+                  </div>
+                )}
               </div>
             ) : (
-              <p className="text-xs text-slate-400 italic font-medium py-2">
-                No violation records logged for student in Semester {selectedSem}.
-              </p>
+              !isLoading && (
+                <p className="text-xs text-slate-400 italic font-medium py-2">
+                  No violation records logged for student in Semester {selectedSem}.
+                </p>
+              )
             )}
           </div>
         </div>

@@ -5,6 +5,7 @@ import { useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const PAGE_TITLES: Record<string, string> = {
+  '/home': 'Campus Intelligence Overview',
   '/dashboard': 'Dashboard',
   '/students': 'Students',
   '/detect': 'Recognition',
@@ -49,13 +50,23 @@ export const Header: React.FC<HeaderProps> = ({ onOpenAI }) => {
       <div className="flex items-center gap-2.5">
         {/* Theme Toggle */}
         <motion.button
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
+          whileHover={{ scale: 1.08 }}
+          whileTap={{ scale: 0.92 }}
           onClick={toggleTheme}
-          className="w-9 h-9 rounded-xl flex items-center justify-center text-slate-600 dark:text-slate-300 hover:bg-black/5 dark:hover:bg-white/10 transition-all"
+          className="w-9 h-9 rounded-xl flex items-center justify-center text-slate-600 dark:text-slate-300 hover:bg-black/5 dark:hover:bg-white/10 transition-all cursor-pointer overflow-hidden relative"
           title="Toggle Dark/Light Mode"
         >
-          {isDark ? <Sun className="w-4 h-4 text-[#FF9F0A]" strokeWidth={2} /> : <Moon className="w-4 h-4 text-slate-600" strokeWidth={2} />}
+          <AnimatePresence mode="wait" initial={false}>
+            <motion.div
+              key={isDark ? 'dark' : 'light'}
+              initial={{ y: -16, opacity: 0, rotate: -90, scale: 0.5 }}
+              animate={{ y: 0, opacity: 1, rotate: 0, scale: 1 }}
+              exit={{ y: 16, opacity: 0, rotate: 90, scale: 0.5 }}
+              transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+            >
+              {isDark ? <Sun className="w-4 h-4 text-[#FF9F0A]" strokeWidth={2} /> : <Moon className="w-4 h-4 text-slate-600" strokeWidth={2} />}
+            </motion.div>
+          </AnimatePresence>
         </motion.button>
 
         {/* Notifications */}
