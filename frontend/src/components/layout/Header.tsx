@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Sun, Moon, Bell, Sparkles, AlertTriangle, ShieldCheck, CheckCircle2, ChevronRight, RefreshCw } from 'lucide-react';
+import { Sun, Moon, Bell, Sparkles, AlertTriangle, ShieldCheck, Mail, ChevronRight, RefreshCw, Send, CheckCircle2 } from 'lucide-react';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { violationService } from '../../services/violationService';
+import { notificationService, NotificationHistoryItem } from '../../services/notificationService';
 import { Violation } from '../../types/violation';
 
 const PAGE_TITLES: Record<string, string> = {
@@ -27,20 +28,28 @@ export const Header: React.FC<HeaderProps> = ({ onOpenAI }) => {
   const navigate = useNavigate();
 
   const [showNotifications, setShowNotifications] = useState(false);
+  const [activeTab, setActiveTab] = useState<'mails' | 'incidents'>('mails');
   const [recentViolations, setRecentViolations] = useState<Violation[]>([]);
+  const [mailHistory, setMailHistory] = useState<NotificationHistoryItem[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(false);
 
   const title = PAGE_TITLES[location.pathname] || 'Dashboard';
 
-  const fetchRecent = async () => {
+  const fetchData = async () => {
     try {
       setLoading(true);
-      const data = await violationService.getViolations();
-      // Sort newest first & take top 5
-      const sorted = (data || []).slice(-5).reverse();
-      setRecentViolations(sorted);
-      setUnreadCount(sorted.length > 0 ? sorted.length : 0);
+      const [violationsData, historyData] = await Promise.all([
+        violationService.getViolations().catch(() => []),
+        notificationService.getHistory(20).catch(() => []),
+      ]);
+
+      const sortedViolations = (violationsData || []).slice(-5).reverse();
+      setRecentViolations(sortedViolations);
+      setMailHistory(historyData || []);
+
+      const totalCount = (historyData?.length || 0) + (sortedViolations?.length || 0);
+      setUnreadCount(totalCount > 0 ? Math.min(totalCount, 9) : 0);
     } catch {
       // Fallback
     } finally {
@@ -49,7 +58,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenAI }) => {
   };
 
   useEffect(() => {
-    fetchRecent();
+    fetchData();
   }, [location.pathname]);
 
   const handleMarkAllRead = () => {
@@ -105,11 +114,11 @@ export const Header: React.FC<HeaderProps> = ({ onOpenAI }) => {
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             onClick={() => {
-              if (!showNotifications) fetchRecent();
+              if (!showNotifications) fetchData();
               setShowNotifications(!showNotifications);
             }}
             className="w-9 h-9 rounded-xl flex items-center justify-center text-slate-600 dark:text-slate-300 hover:bg-black/5 dark:hover:bg-white/10 transition-all relative cursor-pointer"
-            title="System & Disciplinary Notifications"
+            title="Disciplinary Notifications & Email Status"
           >
             <Bell className="w-4 h-4" strokeWidth={2} />
             {unreadCount > 0 && (
@@ -126,17 +135,13 @@ export const Header: React.FC<HeaderProps> = ({ onOpenAI }) => {
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, y: 8, scale: 0.96 }}
                 transition={{ duration: 0.18 }}
-                className="absolute right-0 mt-3 w-84 sm:w-96 rounded-[24px] glass-panel bg-white/90 dark:bg-slate-900/95 border border-slate-200 dark:border-white/15 shadow-2xl p-4 z-50 text-xs backdrop-blur-2xl space-y-3"
+                className="absolute right-0 mt-3 w-88 sm:w-[410px] rounded-[24px] glass-panel bg-white/95 dark:bg-slate-900/95 border border-slate-200 dark:border-white/15 shadow-2xl p-4 z-50 text-xs backdrop-blur-2xl space-y-3"
               >
+                {/* Header Title & Mark Read */}
                 <div className="flex items-center justify-between border-b border-slate-200 dark:border-white/10 pb-2.5">
                   <div className="flex items-center gap-2">
                     <Bell className="w-4 h-4 text-[#007AFF]" />
-                    <h4 className="font-bold text-slate-800 dark:text-slate-100">Live Campus Alerts</h4>
-                    {unreadCount > 0 && (
-                      <span className="px-2 py-0.5 rounded-full bg-[#FF453A]/15 text-[#FF453A] font-bold text-[10px]">
-                        {unreadCount} New
-                      </span>
-                    )}
+                    <h4 className="font-bold text-slate-800 dark:text-slate-100">Disciplinary Alerts & Mails</h4>
                   </div>
                   {unreadCount > 0 && (
                     <button
@@ -148,60 +153,117 @@ export const Header: React.FC<HeaderProps> = ({ onOpenAI }) => {
                   )}
                 </div>
 
+                {/* Sub-Tabs: Mails Sent vs Incidents Logged */}
+                <div className="flex rounded-xl bg-slate-100 dark:bg-white/5 p-1 gap-1">
+                  <button
+                    onClick={() => setActiveTab('mails')}
+                    className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                      activeTab === 'mails'
+                        ? 'bg-white dark:bg-white/15 text-slate-800 dark:text-white shadow-xs'
+                        : 'text-slate-500 dark:text-slate-400 hover:text-slate-800'
+                    }`}
+                  >
+                    <Mail className="w-3.5 h-3.5 text-[#007AFF]" />
+                    Disciplinary Mails ({mailHistory.length})
+                  </button>
+                  <button
+                    onClick={() => setActiveTab('incidents')}
+                    className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                      activeTab === 'incidents'
+                        ? 'bg-white dark:bg-white/15 text-slate-800 dark:text-white shadow-xs'
+                        : 'text-slate-500 dark:text-slate-400 hover:text-slate-800'
+                    }`}
+                  >
+                    <AlertTriangle className="w-3.5 h-3.5 text-[#FF9F0A]" />
+                    Incidents Logged ({recentViolations.length})
+                  </button>
+                </div>
+
                 {/* Notification Items List */}
                 <div className="space-y-2 max-h-80 overflow-y-auto pr-1">
-                  {/* System Health Item */}
-                  <div className="p-3 rounded-2xl bg-white/70 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 flex items-start gap-3">
-                    <div className="w-7 h-7 rounded-xl bg-[#30D158]/15 text-[#30D158] flex items-center justify-center shrink-0 mt-0.5">
-                      <ShieldCheck className="w-4 h-4" />
-                    </div>
-                    <div className="flex-1">
-                      <p className="font-bold text-slate-800 dark:text-slate-100 text-xs">ArcFace 512D Vector Engine</p>
-                      <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">RetinaFace detector active & operational.</p>
-                      <span className="text-[10px] text-slate-400 mt-1 block">Active System Status</span>
-                    </div>
-                  </div>
-
-                  {/* Real Incident Notifications */}
                   {loading ? (
-                    <div className="p-4 text-center text-slate-400 text-xs flex items-center justify-center gap-2">
-                      <RefreshCw className="w-3.5 h-3.5 animate-spin text-[#007AFF]" /> Syncing notifications...
+                    <div className="p-5 text-center text-slate-400 text-xs flex items-center justify-center gap-2">
+                      <RefreshCw className="w-4 h-4 animate-spin text-[#007AFF]" /> Fetching real-time notifications...
                     </div>
-                  ) : recentViolations.length > 0 ? (
-                    recentViolations.map((v) => (
-                      <div
-                        key={v.id || v._id}
-                        onClick={() => {
-                          setShowNotifications(false);
-                          navigate('/violations');
-                        }}
-                        className="p-3 rounded-2xl bg-white/70 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 hover:border-[#007AFF]/50 transition-all flex items-start gap-3 cursor-pointer group"
-                      >
-                        <div className="w-7 h-7 rounded-xl bg-[#FF9F0A]/15 text-[#FF9F0A] flex items-center justify-center shrink-0 mt-0.5">
-                          <AlertTriangle className="w-4 h-4" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center justify-between gap-1">
-                            <p className="font-bold text-slate-800 dark:text-slate-100 text-xs truncate">
-                              {v.student_name || v.roll_no}
+                  ) : activeTab === 'mails' ? (
+                    /* Sent Disciplinary Mail Audit List */
+                    mailHistory.length > 0 ? (
+                      mailHistory.map((item) => (
+                        <div
+                          key={item._id}
+                          className="p-3 rounded-2xl bg-white/70 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 flex items-start gap-3"
+                        >
+                          <div className="w-8 h-8 rounded-xl bg-[#007AFF]/15 text-[#007AFF] flex items-center justify-center shrink-0 mt-0.5">
+                            <Send className="w-4 h-4" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center justify-between gap-1">
+                              <p className="font-bold text-slate-800 dark:text-slate-100 text-xs truncate">
+                                {item.student_name || item.roll_number}
+                              </p>
+                              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#30D158]/15 text-[#30D158] uppercase tracking-wider shrink-0">
+                                {item.delivery_status || 'SENT'}
+                              </span>
+                            </div>
+                            <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                              Roll No: <span className="font-semibold text-slate-700 dark:text-slate-200">{item.roll_number}</span> • Level {item.notification_level || 1} Escalation
                             </p>
-                            <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-slate-200 dark:bg-white/10 text-slate-600 dark:text-slate-300">
-                              {v.type}
+                            {item.recipient && (
+                              <p className="text-[10px] text-slate-400 font-mono mt-0.5 truncate">
+                                Sent to: {item.recipient}
+                              </p>
+                            )}
+                            <span className="text-[10px] text-slate-400 mt-1 block">
+                              {item.sent_at ? new Date(item.sent_at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Recently Dispatched'}
                             </span>
                           </div>
-                          <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 truncate">
-                            {v.location} • {v.department || 'General'}
-                          </p>
-                          <span className="text-[10px] text-[#007AFF] font-medium mt-1 block group-hover:underline">
-                            {v.date || 'Recently logged'}
-                          </span>
                         </div>
+                      ))
+                    ) : (
+                      <div className="p-6 text-center text-slate-400 text-xs space-y-1">
+                        <Mail className="w-6 h-6 mx-auto stroke-1 text-slate-400 mb-1" />
+                        <p className="font-semibold text-slate-600 dark:text-slate-300">No Disciplinary Mails Sent Yet</p>
+                        <p className="text-[11px]">Mails dispatch automatically when student violations cross policy thresholds.</p>
                       </div>
-                    ))
+                    )
                   ) : (
-                    <div className="p-4 text-center text-slate-400 text-xs">
-                      No active violation alerts
-                    </div>
+                    /* Recent Logged Campus Incidents */
+                    recentViolations.length > 0 ? (
+                      recentViolations.map((v) => (
+                        <div
+                          key={v.id || v._id}
+                          onClick={() => {
+                            setShowNotifications(false);
+                            navigate('/violations');
+                          }}
+                          className="p-3 rounded-2xl bg-white/70 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 hover:border-[#007AFF]/50 transition-all flex items-start gap-3 cursor-pointer group"
+                        >
+                          <div className="w-8 h-8 rounded-xl bg-[#FF9F0A]/15 text-[#FF9F0A] flex items-center justify-center shrink-0 mt-0.5">
+                            <AlertTriangle className="w-4 h-4" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center justify-between gap-1">
+                              <p className="font-bold text-slate-800 dark:text-slate-100 text-xs truncate">
+                                {v.student_name || v.roll_no}
+                              </p>
+                              <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-slate-200 dark:bg-white/10 text-slate-600 dark:text-slate-300">
+                                {v.type}
+                              </span>
+                            </div>
+                            <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 truncate">
+                              {v.location} • {v.department || 'General'}
+                            </p>
+                            <span className="text-[10px] text-[#007AFF] font-medium mt-1 block group-hover:underline">
+                              {v.date || 'Recently logged'}
+                            </span>
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="p-6 text-center text-slate-400 text-xs">
+                        No active violation alerts
+                      </div>
+                    )
                   )}
                 </div>
 
@@ -214,7 +276,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenAI }) => {
                     }}
                     className="text-xs font-bold text-[#007AFF] hover:underline inline-flex items-center gap-1 cursor-pointer"
                   >
-                    View All Incidents in Violations Center <ChevronRight className="w-3.5 h-3.5" />
+                    View Violations Management Center <ChevronRight className="w-3.5 h-3.5" />
                   </button>
                 </div>
               </motion.div>
